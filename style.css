@@ -181,3 +181,26 @@ footer {
 .video-card {
     animation: fadeIn 0.5s ease-in;
 }
+
+/* Add these styles to your existing CSS */
+
+.portfolio-intro {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto var(--spacing);
+    color: #888;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    opacity: 0.8;
+}
+
+#featured h2, #videos h2 {
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
