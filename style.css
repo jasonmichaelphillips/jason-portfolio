@@ -107,6 +107,22 @@ main {
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     margin: 0 auto;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Hide YouTube player controls */
+.ytp-chrome-top,
+.ytp-chrome-bottom,
+.ytp-gradient-top,
+.ytp-gradient-bottom,
+.ytp-show-cards-title,
+.ytp-watermark,
+.ytp-pause-overlay {
+    display: none !important;
 }
 
 /* Portfolio section */
