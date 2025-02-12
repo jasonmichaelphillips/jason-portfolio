@@ -112,6 +112,7 @@ main {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+    background-color: var(--primary-bg);
 }
 
 /* Hide YouTube player controls */
@@ -121,8 +122,23 @@ main {
 .ytp-gradient-bottom,
 .ytp-show-cards-title,
 .ytp-watermark,
-.ytp-pause-overlay {
+.ytp-pause-overlay,
+.ytp-spinner,
+.ytp-cued-thumbnail-overlay,
+.ytp-large-play-button,
+.ytp-paid-content-overlay,
+.ytp-youtube-button,
+.ytp-embed,
+.ytp-title,
+.ytp-share-button,
+.ytp-watch-later-button,
+.ytp-menuitem,
+.ytp-ce-element {
     display: none !important;
+}
+
+iframe[src*="youtube.com"] {
+    pointer-events: none !important;
 }
 
 /* Portfolio section */
