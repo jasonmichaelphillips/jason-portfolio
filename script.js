@@ -1,5 +1,5 @@
-const API_KEY = 'AIzaSyA0WI_xOUGvPbGql9NEPZX4wjKyAqBF_Og'; // TODO: Move to secure backend
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
+const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
 
 // Load YouTube IFrame API
 const tag = document.createElement('script');
@@ -20,9 +20,7 @@ function loadVideoInPlayer(videoId) {
 
 async function initializePage() {
     try {
-        const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=12&type=video`
-        );
+        const response = await fetch(`${WORKER_URL}/api/videos`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
