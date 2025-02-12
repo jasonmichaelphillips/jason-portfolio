@@ -1,4 +1,4 @@
-/* Base styles */
+/* Base styles and CSS variables */
 :root {
     --primary-bg: #000000;
     --secondary-bg: #111111;
@@ -7,6 +7,8 @@
     --hover-color: #ff3333;
     --spacing: 2rem;
     --border-radius: 12px;
+    --max-width: 1400px;
+    --transition: all 0.3s ease;
 }
 
 * {
@@ -20,15 +22,15 @@ body {
     background-color: var(--primary-bg);
     color: var(--text-color);
     line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Navigation */
+/* Navigation styles */
 nav {
     background-color: var(--secondary-bg);
     padding: 1.5rem var(--spacing);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -37,9 +39,20 @@ nav {
 
 nav .logo {
     font-size: 1.5rem;
-    font-weight: bold;
+    font-weight: 500;
     color: var(--text-color);
     text-decoration: none;
+    transition: var(--transition);
+}
+
+nav .logo:hover {
+    color: var(--accent-color);
+}
+
+nav, .nav-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 nav ul {
@@ -51,51 +64,76 @@ nav ul {
 nav a {
     color: var(--text-color);
     text-decoration: none;
-    transition: color 0.3s ease;
+    transition: var(--transition);
+    font-size: 1rem;
 }
 
 nav a:hover {
     color: var(--accent-color);
 }
 
+/* Main content */
+main {
+    flex: 1;
+    width: 100%;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: var(--spacing);
+}
+
 /* Featured section */
 #featured {
-    padding: var(--spacing);
     background-color: var(--secondary-bg);
+    padding: var(--spacing);
+    margin: -var(--spacing);
     margin-bottom: var(--spacing);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #featured h2 {
-    margin-bottom: 1.5rem;
     font-size: 2rem;
+    font-weight: 300;
+    margin-bottom: var(--spacing);
     text-align: center;
 }
 
 #featured-video-player {
+    width: 100%;
     max-width: 960px;
-    margin: 0 auto;
+    aspect-ratio: 16/9;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-/* Video grid */
-#videos {
-    padding: var(--spacing);
-    max-width: 1400px;
     margin: 0 auto;
 }
 
+/* Portfolio section */
+#videos {
+    padding: var(--spacing) 0;
+}
+
 #videos h2 {
-    margin-bottom: var(--spacing);
     font-size: 2rem;
+    font-weight: 300;
     text-align: center;
+    margin-bottom: 1rem;
+}
+
+.portfolio-intro {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto var(--spacing);
+    color: #888;
+    font-size: 1.1rem;
 }
 
 #video-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--spacing);
+    width: 100%;
 }
 
 .video-card {
@@ -103,7 +141,7 @@ nav a:hover {
     border-radius: var(--border-radius);
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: var(--transition);
 }
 
 .video-card:hover {
@@ -113,7 +151,6 @@ nav a:hover {
 
 .video-card img {
     width: 100%;
-    height: auto;
     aspect-ratio: 16/9;
     object-fit: cover;
     display: block;
@@ -125,8 +162,9 @@ nav a:hover {
 
 .video-info h3 {
     font-size: 1rem;
-    margin: 0;
+    font-weight: 400;
     line-height: 1.4;
+    margin: 0;
 }
 
 /* Loading and error states */
@@ -142,29 +180,40 @@ nav a:hover {
 
 /* Footer */
 footer {
-    text-align: center;
-    padding: var(--spacing);
     background-color: var(--secondary-bg);
-    margin-top: var(--spacing);
+    padding: var(--spacing);
+    text-align: center;
+    margin-top: auto;
+}
+
+.footer-content {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    opacity: 0.8;
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
+    :root {
+        --spacing: 1rem;
+    }
+
     nav {
         flex-direction: column;
         gap: 1rem;
-        text-align: center;
         padding: 1rem;
     }
 
+    nav ul {
+        gap: 1rem;
+    }
+
     #featured-video-player {
-        height: auto;
-        width: 100%;
+        max-width: 100%;
     }
 
     #video-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
     }
 
     .video-card:hover {
@@ -174,33 +223,10 @@ footer {
 
 /* Animations */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .video-card {
-    animation: fadeIn 0.5s ease-in;
-}
-
-/* Add these styles to your existing CSS */
-
-.portfolio-intro {
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto var(--spacing);
-    color: #888;
-    font-size: 1.1rem;
-    line-height: 1.6;
-}
-
-.footer-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    opacity: 0.8;
-}
-
-#featured h2, #videos h2 {
-    font-weight: 300;
-    letter-spacing: 0.5px;
+    animation: fadeIn 0.5s ease-out forwards;
 }
