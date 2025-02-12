@@ -1,4 +1,4 @@
-const API_KEY = 'YOUTUBE_API_KEY_JMP';
+const API_KEY = 'AIzaSyA0WI_xOUGvPbGql9NEPZX4wjKyAqBF_Og';
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
 
 // Load YouTube IFrame API
