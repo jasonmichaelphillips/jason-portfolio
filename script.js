@@ -1,7 +1,7 @@
 // IMPORTANT:  Do NOT put your actual API key here in the code you save!
 // We'll use an environment variable in Cloudflare.
 const apiKey = 'YOUR_YOUTUBE_API_KEY'; //This is the line we will change in Cloudflare.
-const channelId = 'UC_x5XG1OV2P6uZZ5FSM9Ttw'; // Your channel ID (Corrected)
+const channelId = 'UUCgR5VYHYy-u_HIiimcYQOMA'; // Your channel ID (Corrected)
 const videoGrid = document.querySelector('.video-grid');
 
 async function getYouTubeVideos() {
