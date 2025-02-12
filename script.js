@@ -1,4 +1,4 @@
-const API_KEY = 'AIzaSyA0WI_xOUGvPbGql9NEPZX4wjKyAqBF_Og';
+const API_KEY = 'AIzaSyA0WI_xOUGvPbGql9NEPZX4wjKyAqBF_Og'; // TODO: Move to secure backend
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
 
 // Load YouTube IFrame API
@@ -9,6 +9,14 @@ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 let player;
 let featuredVideoId;
+
+function loadVideoInPlayer(videoId) {
+    if (player) {
+        player.loadVideoById(videoId);
+        player.playVideo();
+        document.getElementById('featured').scrollIntoView({ behavior: 'smooth' });
+    }
+}
 
 async function initializePage() {
     try {
@@ -32,7 +40,8 @@ async function initializePage() {
                 playerVars: {
                     'playsinline': 1,
                     'modestbranding': 1,
-                    'rel': 0
+                    'rel': 0,
+                    'autoplay': 0
                 }
             });
 
@@ -46,9 +55,11 @@ async function initializePage() {
                     <img src="${item.snippet.thumbnails.high.url}" alt="${item.snippet.title}">
                     <div class="video-info">
                         <h3>${item.snippet.title}</h3>
-                        <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank">Watch Video</a>
                     </div>
                 `;
+                videoCard.addEventListener('click', () => {
+                    loadVideoInPlayer(item.id.videoId);
+                });
                 videoGrid.appendChild(videoCard);
             });
         }
@@ -62,7 +73,6 @@ function onYouTubeIframeAPIReady() {
     initializePage();
 }
 
-// Initialize the page when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     if (window.YT) {
         initializePage();

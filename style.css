@@ -70,11 +70,13 @@ nav a:hover {
     background: #111;
     border-radius: 12px;
     overflow: hidden;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
 }
 
 .video-card:hover {
     transform: scale(1.03);
+    box-shadow: 0 4px 15px rgba(30, 144, 255, 0.2);
 }
 
 .video-card img {
@@ -88,23 +90,10 @@ nav a:hover {
 }
 
 .video-info h3 {
-    margin: 0 0 1rem 0;
+    margin: 0;
     font-size: 1.1rem;
     line-height: 1.4;
-}
-
-.video-info a {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background: #1e90ff;
     color: #fff;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background 0.3s ease;
-}
-
-.video-info a:hover {
-    background: #1976d2;
 }
 
 @media (max-width: 768px) {
@@ -117,5 +106,9 @@ nav a:hover {
         flex-direction: column;
         gap: 1rem;
         text-align: center;
+    }
+    
+    #video-grid {
+        grid-template-columns: 1fr;
     }
 }
