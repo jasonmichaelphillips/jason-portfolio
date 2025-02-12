@@ -1,5 +1,6 @@
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
 const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
+let nextPageToken = '';
 
 // Load YouTube IFrame API
 const tag = document.createElement('script');
@@ -14,8 +15,55 @@ function loadVideoInPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
         player.playVideo();
-        player.unMute(); // Ensure audio plays when switching videos
+        player.unMute();
         document.getElementById('featured').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function createVideoCards(items, container) {
+    items.forEach(item => {
+        const videoCard = document.createElement('div');
+        videoCard.className = 'video-card';
+        videoCard.innerHTML = `
+            <img src="${item.snippet.thumbnails.high.url}" alt="${item.snippet.title}" loading="lazy">
+            <div class="video-info">
+                <h3>${item.snippet.title}</h3>
+            </div>
+        `;
+        videoCard.addEventListener('click', () => {
+            loadVideoInPlayer(item.id.videoId);
+        });
+        container.appendChild(videoCard);
+    });
+}
+
+async function loadMoreVideos() {
+    try {
+        const loadMoreButton = document.getElementById('load-more');
+        loadMoreButton.textContent = 'Loading...';
+        loadMoreButton.disabled = true;
+
+        const response = await fetch(`${WORKER_URL}/api/videos?pageToken=${nextPageToken}`);
+        const data = await response.json();
+
+        if (data.items && data.items.length > 0) {
+            const videoGrid = document.getElementById('video-grid');
+            createVideoCards(data.items, videoGrid);
+            
+            nextPageToken = data.nextPageToken;
+            
+            if (!nextPageToken) {
+                loadMoreButton.parentElement.remove();
+            } else {
+                loadMoreButton.textContent = 'Load More Videos';
+                loadMoreButton.disabled = false;
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        const loadMoreButton = document.getElementById('load-more');
+        loadMoreButton.textContent = 'Error Loading More Videos';
+        loadMoreButton.disabled = true;
     }
 }
 
@@ -28,6 +76,7 @@ async function initializePage() {
         }
         
         const data = await response.json();
+        nextPageToken = data.nextPageToken;
         
         if (data.items && data.items.length > 0) {
             featuredVideoId = data.items[0].id.videoId;
@@ -48,14 +97,14 @@ async function initializePage() {
                     'loop': 1,
                     'playlist': featuredVideoId,
                     'showinfo': 0,
-                    'mute': 1, // Required for initial autoplay
+                    'mute': 1,
                     'enablejsapi': 1
                 },
                 events: {
                     'onReady': function(event) {
                         event.target.playVideo();
                         setTimeout(() => {
-                            event.target.unMute(); // Unmute after a short delay
+                            event.target.unMute();
                         }, 1000);
                     },
                     'onStateChange': function(event) {
@@ -66,24 +115,20 @@ async function initializePage() {
                 }
             });
 
-            // Create video grid
             const videoGrid = document.getElementById('video-grid');
-            videoGrid.innerHTML = ''; // Clear existing content
+            videoGrid.innerHTML = '';
             
-            data.items.slice(1).forEach(item => {
-                const videoCard = document.createElement('div');
-                videoCard.className = 'video-card';
-                videoCard.innerHTML = `
-                    <img src="${item.snippet.thumbnails.high.url}" alt="${item.snippet.title}">
-                    <div class="video-info">
-                        <h3>${item.snippet.title}</h3>
-                    </div>
+            createVideoCards(data.items.slice(1), videoGrid);
+
+            if (nextPageToken) {
+                const loadMoreContainer = document.createElement('div');
+                loadMoreContainer.className = 'load-more-container';
+                loadMoreContainer.innerHTML = `
+                    <button id="load-more" class="load-more-button">Load More Videos</button>
                 `;
-                videoCard.addEventListener('click', () => {
-                    loadVideoInPlayer(item.id.videoId);
-                });
-                videoGrid.appendChild(videoCard);
-            });
+                videoGrid.parentNode.insertBefore(loadMoreContainer, videoGrid.nextSibling);
+                document.getElementById('load-more').addEventListener('click', loadMoreVideos);
+            }
         }
     } catch (error) {
         console.error('Error:', error);
