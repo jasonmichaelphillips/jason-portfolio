@@ -14,6 +14,7 @@ function loadVideoInPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
         player.playVideo();
+        player.unMute(); // Ensure audio plays when switching videos
         document.getElementById('featured').scrollIntoView({ behavior: 'smooth' });
     }
 }
@@ -47,22 +48,42 @@ async function initializePage() {
                     'loop': 1,
                     'playlist': featuredVideoId,
                     'showinfo': 0,
-                    'mute': 1, // Required for autoplay to work
+                    'mute': 1, // Required for initial autoplay
                     'enablejsapi': 1
                 },
                 events: {
                     'onReady': function(event) {
                         event.target.playVideo();
+                        setTimeout(() => {
+                            event.target.unMute(); // Unmute after a short delay
+                        }, 1000);
                     },
                     'onStateChange': function(event) {
                         if (event.data === YT.PlayerState.ENDED) {
-                            player.playVideo(); // Restart when ended
+                            player.playVideo();
                         }
                     }
                 }
             });
 
-            // Rest of your video grid code...
+            // Create video grid
+            const videoGrid = document.getElementById('video-grid');
+            videoGrid.innerHTML = ''; // Clear existing content
+            
+            data.items.slice(1).forEach(item => {
+                const videoCard = document.createElement('div');
+                videoCard.className = 'video-card';
+                videoCard.innerHTML = `
+                    <img src="${item.snippet.thumbnails.high.url}" alt="${item.snippet.title}">
+                    <div class="video-info">
+                        <h3>${item.snippet.title}</h3>
+                    </div>
+                `;
+                videoCard.addEventListener('click', () => {
+                    loadVideoInPlayer(item.id.videoId);
+                });
+                videoGrid.appendChild(videoCard);
+            });
         }
     } catch (error) {
         console.error('Error:', error);
@@ -74,7 +95,6 @@ function onYouTubeIframeAPIReady() {
     initializePage();
 }
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     if (window.YT) {
         initializePage();
