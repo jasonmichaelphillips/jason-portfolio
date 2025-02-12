@@ -1,21 +1,19 @@
-// IMPORTANT:  Do NOT put your actual API key here in the code you save!
-// We'll use an environment variable in Cloudflare.
-const apiKey = 'YOUR_YOUTUBE_API_KEY'; //This is the line we will change in Cloudflare.
-const channelId = 'UCgR5VYHYy-u_HIiimcYQOMA'; // Your channel ID (Corrected)
+const apiKey = 'YOUTUBE_API_KEY_JMP'; // Changed placeholder
+const channelId = 'UCgR5VYHYy-u_HIiimcYQOMA';
 const videoGrid = document.querySelector('.video-grid');
 
 async function getYouTubeVideos() {
     try {
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId}&part=snippet,id&order=date&maxResults=10`); // Fetch latest 10
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${apiKey}&channelId=${channelId}&part=snippet,id&order=date&maxResults=10`);
         const data = await response.json();
+        console.log(data);
 
         if (data.items) {
             data.items.forEach(item => {
                 if (item.id.kind === 'youtube#video') {
                     const videoId = item.id.videoId;
                     const title = item.snippet.title;
-                    const thumbnailUrl = item.snippet.thumbnails.high.url; // Use high-res thumbnail
-                    const description = item.snippet.description;
+                    const thumbnailUrl = item.snippet.thumbnails.high.url;
 
                     const videoItem = document.createElement('div');
                     videoItem.classList.add('video-item');
