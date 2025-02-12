@@ -39,30 +39,33 @@ async function initializePage() {
                     'playsinline': 1,
                     'modestbranding': 1,
                     'rel': 0,
-                    'autoplay': 0
+                    'autoplay': 1,
+                    'controls': 0,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'iv_load_policy': 3,
+                    'loop': 1,
+                    'playlist': featuredVideoId,
+                    'showinfo': 0,
+                    'mute': 1, // Required for autoplay to work
+                    'enablejsapi': 1
+                },
+                events: {
+                    'onReady': function(event) {
+                        event.target.playVideo();
+                    },
+                    'onStateChange': function(event) {
+                        if (event.data === YT.PlayerState.ENDED) {
+                            player.playVideo(); // Restart when ended
+                        }
+                    }
                 }
             });
 
-            const videoGrid = document.getElementById('video-grid');
-            videoGrid.innerHTML = ''; // Clear existing content
-            
-            data.items.slice(1).forEach(item => {
-                const videoCard = document.createElement('div');
-                videoCard.className = 'video-card';
-                videoCard.innerHTML = `
-                    <img src="${item.snippet.thumbnails.high.url}" alt="${item.snippet.title}">
-                    <div class="video-info">
-                        <h3>${item.snippet.title}</h3>
-                    </div>
-                `;
-                videoCard.addEventListener('click', () => {
-                    loadVideoInPlayer(item.id.videoId);
-                });
-                videoGrid.appendChild(videoCard);
-            });
+            // Rest of your video grid code...
         }
     } catch (error) {
-        console.error('Error fetching videos:', error);
+        console.error('Error:', error);
         document.getElementById('video-grid').innerHTML = '<p>Error loading videos. Please try again later.</p>';
     }
 }
@@ -71,6 +74,7 @@ function onYouTubeIframeAPIReady() {
     initializePage();
 }
 
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     if (window.YT) {
         initializePage();
