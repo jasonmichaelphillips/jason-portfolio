@@ -266,6 +266,9 @@ footer {
     justify-content: center;
     gap: 1rem;
     margin-top: 1rem;
+    background-color: #ffffff; /* White background for social media icons */
+    padding: 1rem;
+    border-radius: var(--border-radius);
 }
 
 .social-media a {
