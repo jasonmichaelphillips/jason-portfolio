@@ -1,5 +1,4 @@
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
-const API_KEY = 'YOUR_YOUTUBE_API_KEY'; // Replace with your YouTube Data API key
 const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
 let nextPageToken = '';
 let isMuted = false; // Set to false to start unmuted
@@ -139,12 +138,12 @@ async function initializePage() {
 
 async function fetchTotalViews() {
     try {
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${CHANNEL_ID}&key=${API_KEY}`);
+        const response = await fetch(`${WORKER_URL}/api/totalViews?channelId=${CHANNEL_ID}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        const viewCount = data.items[0].statistics.viewCount;
+        const viewCount = data.totalViews;
         document.getElementById('view-count').textContent = viewCount.toLocaleString();
     } catch (error) {
         console.error('Error fetching total views:', error);
