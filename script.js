@@ -1,6 +1,7 @@
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
 const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
 let nextPageToken = '';
+let isMuted = true;
 
 // Load YouTube IFrame API
 const tag = document.createElement('script');
@@ -15,7 +16,9 @@ function loadVideoInPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
         player.playVideo();
-        player.unMute();
+        if (!isMuted) {
+            player.unMute();
+        }
         document.getElementById('featured').scrollIntoView({ behavior: 'smooth' });
     }
 }
@@ -104,7 +107,9 @@ async function initializePage() {
                     'onReady': function(event) {
                         event.target.playVideo();
                         setTimeout(() => {
-                            event.target.unMute();
+                            if (!isMuted) {
+                                event.target.unMute();
+                            }
                         }, 1000);
                     },
                     'onStateChange': function(event) {
@@ -144,4 +149,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.YT) {
         initializePage();
     }
+
+    const muteButton = document.getElementById('mute-button');
+    muteButton.addEventListener('click', () => {
+        if (player) {
+            if (isMuted) {
+                player.unMute();
+                muteButton.textContent = 'Mute';
+            } else {
+                player.mute();
+                muteButton.textContent = 'Unmute';
+            }
+            isMuted = !isMuted;
+        }
+    });
 });
