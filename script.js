@@ -146,8 +146,12 @@ async function fetchTotalViews() {
         const viewCount = data.totalViews;
         document.getElementById('view-count').textContent = viewCount.toLocaleString();
     } catch (error) {
-        console.error('Error fetching total views:', error);
-        document.getElementById('view-count').textContent = 'Error';
+        if (error.message.includes('quota')) {
+            document.getElementById('view-count').textContent = 'Quota exceeded. Try again later.';
+        } else {
+            console.error('Error fetching total views:', error);
+            document.getElementById('view-count').textContent = 'Error';
+        }
     }
 }
 
