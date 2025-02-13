@@ -136,25 +136,6 @@ async function initializePage() {
     }
 }
 
-async function fetchTotalViews() {
-    try {
-        const response = await fetch(`${WORKER_URL}/api/totalViews?channelId=${CHANNEL_ID}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const viewCount = data.totalViews;
-        document.getElementById('view-count').textContent = viewCount.toLocaleString();
-    } catch (error) {
-        if (error.message.includes('quota')) {
-            document.getElementById('view-count').textContent = 'Quota exceeded. Try again later.';
-        } else {
-            console.error('Error fetching total views:', error);
-            document.getElementById('view-count').textContent = 'Error';
-        }
-    }
-}
-
 function onYouTubeIframeAPIReady() {
     initializePage();
 }
@@ -177,6 +158,4 @@ document.addEventListener('DOMContentLoaded', () => {
             isMuted = !isMuted;
         }
     });
-
-    fetchTotalViews();
 });
