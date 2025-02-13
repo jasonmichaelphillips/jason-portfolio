@@ -140,6 +140,9 @@ async function initializePage() {
 async function fetchTotalViews() {
     try {
         const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${CHANNEL_ID}&key=${API_KEY}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         const viewCount = data.items[0].statistics.viewCount;
         document.getElementById('view-count').textContent = viewCount.toLocaleString();
