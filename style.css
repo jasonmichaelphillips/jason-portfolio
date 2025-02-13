@@ -72,6 +72,13 @@ nav a:hover {
     color: var(--accent-color);
 }
 
+/* Banner styles */
+.banner {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
 /* Main content */
 main {
     flex: 1;
