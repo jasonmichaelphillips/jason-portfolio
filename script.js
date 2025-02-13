@@ -1,7 +1,7 @@
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
 const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
 let nextPageToken = '';
-let isMuted = true;
+let isMuted = false; // Set to false to start unmuted
 
 // Load YouTube IFrame API
 const tag = document.createElement('script');
@@ -100,17 +100,15 @@ async function initializePage() {
                     'loop': 1,
                     'playlist': featuredVideoId,
                     'showinfo': 0,
-                    'mute': 1,
+                    'mute': 0, // Start unmuted
                     'enablejsapi': 1
                 },
                 events: {
                     'onReady': function(event) {
                         event.target.playVideo();
-                        setTimeout(() => {
-                            if (!isMuted) {
-                                event.target.unMute();
-                            }
-                        }, 1000);
+                        if (!isMuted) {
+                            event.target.unMute();
+                        }
                     },
                     'onStateChange': function(event) {
                         if (event.data === YT.PlayerState.ENDED) {
