@@ -106,9 +106,6 @@ async function initializePage() {
                 events: {
                     'onReady': function(event) {
                         event.target.playVideo();
-                        if (!isMuted) {
-                            event.target.unMute();
-                        }
                     },
                     'onStateChange': function(event) {
                         if (event.data === YT.PlayerState.ENDED) {
