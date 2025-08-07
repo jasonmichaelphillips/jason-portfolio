@@ -342,21 +342,28 @@ footer {
   border: none;
 }
 
-.main-content {
-  flex: 1;
-  margin-left: 20%;
-  width: 80%;
-}
-
-.featured-player-container {
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #000;
-}
-
-#featured-video-player {
-  width: 100%;
-  height: 100%;
+/* Update mobile styles */
+@media (max-width: 768px) {
+  .split-container {
+    flex-direction: column;
+  }
+  
+  .contact-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+  }
+  
+  .contact-sidebar iframe {
+    height: 100vh;
+    min-height: 500px; /* Ensure enough height for all links */
+  }
+  
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* Responsive adjustments */
