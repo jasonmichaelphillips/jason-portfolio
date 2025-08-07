@@ -37,6 +37,7 @@ function createVideoCards(items, container) {
         videoCard.addEventListener('click', () => {
             loadVideoInPlayer(item.id.videoId);
         });
+        // Append at the end to keep reverse chronological order
         container.appendChild(videoCard);
     });
 }
