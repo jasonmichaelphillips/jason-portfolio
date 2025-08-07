@@ -46,8 +46,8 @@ async function loadVideosInfinite() {
     isLoading = true;
     try {
         const url = nextPageToken
-            ? `${WORKER_URL}/api/playlistItems?playlistId=${PLAYLIST_ID}&pageToken=${nextPageToken}`
-            : `${WORKER_URL}/api/playlistItems?playlistId=${PLAYLIST_ID}`;
+            ? `${WORKER_URL}/api/videos?playlistId=${PLAYLIST_ID}&pageToken=${nextPageToken}`
+            : `${WORKER_URL}/api/videos?playlistId=${PLAYLIST_ID}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
