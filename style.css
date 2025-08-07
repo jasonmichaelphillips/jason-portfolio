@@ -380,12 +380,28 @@ footer {
     position: relative;
     width: 100%;
     height: auto;
-    min-height: 400px;
+    min-height: 200px; /* Reduced from 400px */
+    margin-bottom: 20px;
   }
   
   .main-content {
     margin-left: 0;
     width: 100%;
+  }
+}
+
+/* Add new media query for portrait mode */
+@media (max-width: 768px) and (orientation: portrait) {
+  .contact-sidebar {
+    position: relative;
+    height: auto;
+    min-height: fit-content;
+    padding-bottom: 20px;
+  }
+
+  .contact-sidebar iframe {
+    height: auto;
+    min-height: 300px; /* Ensure content is visible */
   }
 }
 
@@ -420,7 +436,8 @@ footer {
     position: relative;
     width: 100%;
     height: auto;
-    min-height: 400px;
+    min-height: 200px; /* Reduced from 400px */
+    margin-bottom: 20px;
   }
   
   .main-content {
