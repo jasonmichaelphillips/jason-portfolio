@@ -352,17 +352,40 @@ footer {
     position: relative;
     width: 100%;
     height: auto;
-    min-height: auto;
+    min-height: 600px; /* Increased to show all content */
+    margin-bottom: 20px;
   }
   
   .contact-sidebar iframe {
-    height: 100vh;
-    min-height: 500px; /* Ensure enough height for all links */
+    height: 600px; /* Match the container height */
+    min-height: 600px; /* Ensure consistent height */
   }
   
   .main-content {
     margin-left: 0;
     width: 100%;
+  }
+
+  /* Additional responsive adjustments */
+  #video-grid {
+    padding: 0 16px 32px 16px;
+    gap: 16px;
+  }
+
+  .video-card:hover {
+    transform: none;
+  }
+}
+
+/* Portrait-specific adjustments */
+@media (max-width: 768px) and (orientation: portrait) {
+  .contact-sidebar {
+    min-height: 650px; /* Even taller for portrait mode */
+  }
+
+  .contact-sidebar iframe {
+    height: 650px;
+    min-height: 650px;
   }
 }
 
