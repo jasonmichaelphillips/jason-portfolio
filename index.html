@@ -1,110 +1,330 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel & Food Videos | Jason Michael Phillips</title>
-    <meta name="description" content="Professional travel and food video creator. Showcasing authentic cultural experiences, street food discoveries, and culinary journeys through cinematic storytelling.">
-    <meta name="keywords" content="travel videos, food reviews, vlogger, street food, travel documentaries, culture, cuisine">
-    <meta name="author" content="Jason Michael Phillips">
-    
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://jasonmichaelphillips.com" />
-    
-    <!-- Open Graph / Social Media -->
-    <meta property="og:title" content="Travel & Food Videos | Jason Michael Phillips">
-    <meta property="og:description" content="Professional travel and food video creator. Authentic cultural experiences and culinary journeys.">
-    <meta property="og:url" content="https://jasonmichaelphillips.com">
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="en_US">
-    <meta property="og:site_name" content="Jason Michael Phillips">
-    
-    <!-- Schema.org markup for Google -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "ProfilePage",
-      "mainEntity": {
-        "@type": "Person",
-        "name": "Jason Michael Phillips",
-        "url": "https://jasonmichaelphillips.com",
-        "description": "Professional travel and food video producer",
-        "jobTitle": "Video Content Creator",
-        "knowsAbout": [
-          "Travel",
-          "Street Food",
-          "Cultural Documentation",
-          "Video Production",
-          "Food Reviews",
-          "Travel Photography"
-        ],
-        "worksFor": {
-          "@type": "Organization",
-          "name": "Independent Content Creator"
-        },
-        "makesOffer": {
-          "@type": "Offer",
-            "name": "Travel and Food Video Production",
-            "description": "Professional video production services specializing in travel and culinary content"
-          }
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jason Michael Phillips | Travel & Food Videos</title>
+  <meta name="description" content="Travel & food videos by Jason Michael Phillips. Authentic cultural experiences, street food, and culinary journeys.">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background: #141414;
+      color: #fff;
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .navbar {
+      display: flex;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(20,20,20,0.98);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #e50914;
+      letter-spacing: 2px;
+      margin-right: 40px;
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      flex: 1;
+    }
+    .nav-links a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 1rem;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    .nav-links a:hover {
+      opacity: 1;
+    }
+    .profile {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: url('profile.jpeg') center/cover no-repeat, #333;
+      margin-left: 20px;
+      border: 2px solid #e50914;
+    }
+    .hero {
+      position: relative;
+      min-height: 60vh;
+      background: #222;
+      display: flex;
+      align-items: flex-end;
+      padding: 40px 40px 60px 40px;
+      box-sizing: border-box;
+    }
+    .hero-content {
+      background: rgba(20,20,20,0.7);
+      padding: 24px 40px;
+      border-radius: 8px;
+      max-width: 600px;
+    }
+    .hero-title {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .hero-desc {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+    .hero-buttons button {
+      background: #e50914;
+      color: #fff;
+      border: none;
+      padding: 12px 30px;
+      font-size: 1rem;
+      border-radius: 4px;
+      margin-right: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .hero-buttons button:hover {
+      background: #b0060f;
+    }
+    #featured-video-player {
+      width: 100%;
+      max-width: 640px;
+      aspect-ratio: 16/9;
+      margin: 0 auto 0 0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      background: #000;
+    }
+    #mute-button {
+      margin-top: 16px;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 18px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #mute-button:hover {
+      background: #e50914;
+    }
+    .row {
+      margin: 40px 0 0 40px;
+    }
+    .row-title {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+    .thumbnails, #video-grid {
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+      margin-left: 8px;
+    }
+    .video-card {
+      position: relative;
+      width: 240px;
+      min-width: 240px;
+      height: 135px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      background: #222;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .video-card:hover {
+      transform: scale(1.08);
+      z-index: 2;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    .video-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-bottom: 2px solid #e50914;
+    }
+    .video-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(0deg, rgba(20,20,20,0.95) 80%, rgba(20,20,20,0.2) 100%);
+      padding: 12px 10px 8px 10px;
+      box-sizing: border-box;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+      text-shadow: 0 2px 8px #000;
+      opacity: 0.95;
+    }
+    .video-card .play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.6);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .video-card:hover .play-btn {
+      opacity: 1;
+    }
+    .play-btn svg {
+      fill: #fff;
+      width: 28px;
+      height: 28px;
+    }
+    footer {
+      background: #181818;
+      color: #aaa;
+      text-align: center;
+      padding: 32px 0 16px 0;
+      margin-top: 60px;
+    }
+    .footer-content {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .social-media {
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+    }
+    .social-media img {
+      width: 32px;
+      height: 32px;
+      filter: grayscale(1) brightness(1.2);
+      transition: filter 0.2s;
+    }
+    .social-media a:hover img {
+      filter: none;
+    }
+    @media (max-width: 900px) {
+      .hero, .navbar {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .row {
+        margin-left: 0;
+      }
+      .thumbnails, #video-grid {
+        margin-left: 0;
       }
     }
-    </script>
-
-    <link rel="stylesheet" href="style.css">
+    @media (max-width: 600px) {
+      .hero-content {
+        padding: 16px 10px;
+      }
+      .hero-title {
+        font-size: 1.5rem;
+      }
+      .video-card, .video-card img {
+        width: 160px;
+        min-width: 160px;
+        height: 90px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <img src="images/banner.svg" alt="Jason Michael Phillips - Freelance Videographer" class="banner">
-        <nav>
-            <a href="#" class="logo">Jason Michael Phillips</a>
-            <ul>
-                <li><a href="#featured">Featured Work</a></li>
-                <li><a href="#videos">Content Portfolio</a></li>
-            </ul>
-        </nav>
-    </header>
+  <nav class="navbar">
+    <a href="#" class="logo">MyFlix</a>
+    <div class="nav-links">
+      <a href="#featured">Home</a>
+      <a href="#video-grid">Videos</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="profile"></div>
+  </nav>
 
-    <main>
-        <section id="featured" aria-label="Featured video content">
-            <h1>Professional Travel & Food Video Production</h1>
-            <div id="featured-video-player"></div>
-            <button id="mute-button" class="mute-button">Mute</button>
-        </section>
-
-        <section id="videos" aria-label="Video portfolio">
-            <h2>Travel & Culinary Content</h2>
-            <p class="portfolio-intro">
-                Capturing authentic cultural experiences and culinary discoveries. 
-                Specializing in travel documentaries, food reviews, and immersive storytelling through 
-                professional video production.
-            </p>
-            <div id="video-grid" aria-label="Video gallery"></div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="footer-content">
-            <p>Professional Travel & Food Video Production</p>
-            <p>&copy; 2025 Jason Michael Phillips | <a href="https://jasonmichaelphillips.com">jasonmichaelphillips.com</a></p>
-            <div class="social-media">
-                <a href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank">
-                    <img src="icons/youtube.svg" alt="YouTube">
-                </a>
-                <a href="https://www.instagram.com/JasonMichaelPhillips" target="_blank">
-                    <img src="icons/instagram.png" alt="Instagram">
-                </a>
-                <a href="https://twitter.com/JasonMP78" target="_blank">
-                    <img src="icons/twitter.png" alt="X">
-                </a>
-                <a href="https://www.facebook.com/JasonMichaelPhillips" target="_blank">
-                    <img src="icons/facebook.png" alt="Facebook">
-                </a>
-            </div>
+  <main>
+    <section class="hero" id="featured">
+      <div class="hero-content">
+        <div class="hero-title">Travel & Food Videos</div>
+        <div class="hero-desc">
+          Authentic cultural experiences, street food discoveries, and culinary journeys.<br>
+          By Jason Michael Phillips.
         </div>
-    </footer>
+        <div class="hero-buttons">
+          <button id="play-featured">Play Featured</button>
+          <button onclick="window.open('https://www.youtube.com/@JasonMichaelPhillips','_blank')">Visit YouTube</button>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="max-width:640px;width:100%;">
+        <div id="featured-video-player"></div>
+        <button id="mute-button">Mute</button>
+      </div>
+    </section>
 
-    <script src="script.js"></script>
+    <section class="row">
+      <div class="row-title">Latest Uploads</div>
+      <div id="video-grid" class="thumbnails" aria-label="Video gallery"></div>
+    </section>
+    <div style="text-align:center;margin:32px 0;">
+      <button id="load-more" style="background:#e50914;color:#fff;border:none;padding:12px 32px;border-radius:4px;font-size:1.1rem;cursor:pointer;">Load More Videos</button>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-content">
+      <p>Professional Travel & Food Video Production</p>
+      <p>&copy; 2025 Jason Michael Phillips | <a href="https://jasonmichaelphillips.com" style="color:#fff;">jasonmichaelphillips.com</a></p>
+      <div class="social-media">
+        <a href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank">
+          <img src="icons/youtube.svg" alt="YouTube">
+        </a>
+        <a href="https://www.instagram.com/JasonMichaelPhillips" target="_blank">
+          <img src="icons/instagram.png" alt="Instagram">
+        </a>
+        <a href="https://twitter.com/JasonMP78" target="_blank">
+          <img src="icons/twitter.png" alt="X">
+        </a>
+        <a href="https://www.facebook.com/JasonMichaelPhillips" target="_blank">
+          <img src="icons/facebook.png" alt="Facebook">
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    // Play featured video on button click
+    document.addEventListener('DOMContentLoaded', function() {
+      const playBtn = document.getElementById('play-featured');
+      playBtn?.addEventListener('click', function() {
+        // Try to play the featured video (script.js should handle this)
+        if (window.featuredVideoId && typeof loadVideoInPlayer === 'function') {
+          loadVideoInPlayer(window.featuredVideoId);
+        }
+        // Scroll to player
+        document.getElementById('featured-video-player')?.scrollIntoView({behavior:'smooth'});
+      });
+    });
+  </script>
 </body>
 </html>
