@@ -7,48 +7,45 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
+      padding: 0.5rem;
       font-family: 'Roboto', Arial, sans-serif;
       background: #141414;
       color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      padding: 2rem;
+      overflow-x: hidden;
     }
 
     .container {
-      max-width: 600px;
-      width: 100%;
-      text-align: center;
+      max-width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .profile-photo {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      border: 2px solid #fff;
     }
 
     h1 {
-      margin-bottom: 1rem;
-      font-size: 2rem;
-    }
-
-    p {
-      margin-bottom: 2rem;
-      font-size: 1.1rem;
+      margin: 0;
+      font-size: 1rem;
     }
 
     .social-links {
       display: flex;
-      flex-direction: column;
-      gap: 1rem;
+      flex-direction: row;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-left: auto;
     }
 
     .social-links a {
-      text-decoration: none;
-      border: 1px solid #444;
-      padding: 1rem;
-      border-radius: 10px;
-      color: #fff;
-      font-size: 1.1rem;
-      transition: all 0.2s ease-in-out;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      white-space: nowrap;
     }
 
     .social-links a.youtube {
@@ -95,28 +92,6 @@
       transform: scale(1.03);
     }
 
-    .profile-photo {
-      width: 120px;
-      height: 120px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 4px solid #fff;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.25);
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    a {
-      color: #e50914;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
     @media (min-width: 600px) {
       .social-links {
         flex-direction: column;
@@ -127,8 +102,10 @@
 <body>
   <div class="container">
     <img src="profile.jpeg" alt="Jason Michael Phillips" class="profile-photo" />
-    <h1>Jason Michael Phillips</h1>
-    <p>Follow me on all platforms below.</p>
+    <div>
+      <h1>Jason Michael Phillips</h1>
+      <p>Follow me on all platforms below.</p>
+    </div>
     
     <div class="social-links">
       <a class="youtube" href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank" rel="noopener noreferrer">📺 Main YouTube Channel</a>
