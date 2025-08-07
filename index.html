@@ -21,7 +21,13 @@
   <main>
     <section class="featured-player-container" id="featured">
       <div id="featured-video-player"></div>
-      <button id="mute-button">Mute</button>
+      <div class="featured-content">
+        <h1 class="featured-title">Latest Video</h1>
+        <div class="featured-buttons">
+          <button class="play-btn"><span>▶</span> Play</button>
+          <button id="mute-button">Mute</button>
+        </div>
+      </div>
     </section>
     <div class="row-title">Latest Uploads</div>
     <section id="video-grid" aria-label="Video gallery"></section>
@@ -38,6 +44,16 @@
         profile.addEventListener('click', function() {
           window.open('contact.html', '_blank');
         });
+      }
+    });
+
+    // Add this after your existing script
+    window.addEventListener('scroll', function() {
+      const navbar = document.querySelector('.navbar');
+      if (window.scrollY > 100) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
       }
     });
   </script>
