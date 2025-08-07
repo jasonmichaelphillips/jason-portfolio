@@ -8,47 +8,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <nav class="navbar">
-    <a href="#" class="logo">MyFlix</a>
-    <div class="nav-links">
-      <a href="#featured">Home</a>
-      <a href="#video-grid">Videos</a>
-      <a href="contact.html" target="_blank" rel="noopener noreferrer">Contact</a>
-    </div>
-    <div class="profile" id="profile-link"></div>
-  </nav>
-
-  <main>
-    <section class="featured-player-container" id="featured">
-      <div id="featured-video-player"></div>
-    </section>
-    <div class="row-title">Latest Uploads</div>
-    <section id="video-grid" aria-label="Video gallery"></section>
-  </main>
+  <div class="split-container">
+    <aside class="contact-sidebar">
+      <iframe src="contact.html" frameborder="0"></iframe>
+    </aside>
+    
+    <main class="main-content">
+      <section class="featured-player-container" id="featured">
+        <div id="featured-video-player"></div>
+      </section>
+      <div class="row-title">Latest Uploads</div>
+      <section id="video-grid" aria-label="Video gallery"></section>
+    </main>
+  </div>
 
   <script src="script.js"></script>
-  <script>
-    // Make profile image link to contact page
-    document.addEventListener('DOMContentLoaded', function() {
-      const profile = document.getElementById('profile-link');
-      if (profile) {
-        profile.style.cursor = 'pointer';
-        profile.title = "Contact Me";
-        profile.addEventListener('click', function() {
-          window.open('contact.html', '_blank');
-        });
-      }
-    });
-
-    // Add this after your existing script
-    window.addEventListener('scroll', function() {
-      const navbar = document.querySelector('.navbar');
-      if (window.scrollY > 100) {
-        navbar.classList.add('scrolled');
-      } else {
-        navbar.classList.remove('scrolled');
-      }
-    });
-  </script>
 </body>
 </html>
