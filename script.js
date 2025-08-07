@@ -1,16 +1,17 @@
 const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
 const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
 let nextPageToken = '';
-let isMuted = false; // Set to false to start unmuted
+let isMuted = false;
+let player;
+let featuredVideoId;
+let isLoading = false;
+let firstLoad = true;
 
 // Load YouTube IFrame API
 const tag = document.createElement('script');
 tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-let player;
-let featuredVideoId;
 
 function loadVideoInPlayer(videoId) {
     if (player) {
@@ -40,53 +41,27 @@ function createVideoCards(items, container) {
     });
 }
 
-async function loadMoreVideos() {
+async function loadVideosInfinite() {
+    if (isLoading || !nextPageToken && !firstLoad) return;
+    isLoading = true;
     try {
-        const loadMoreButton = document.getElementById('load-more');
-        loadMoreButton.textContent = 'Loading...';
-        loadMoreButton.disabled = true;
-
-        const response = await fetch(`${WORKER_URL}/api/videos?pageToken=${nextPageToken}`);
-        const data = await response.json();
-
-        if (data.items && data.items.length > 0) {
-            const videoGrid = document.getElementById('video-grid');
-            createVideoCards(data.items, videoGrid);
-            
-            nextPageToken = data.nextPageToken;
-            
-            if (!nextPageToken) {
-                loadMoreButton.parentElement.remove();
-            } else {
-                loadMoreButton.textContent = 'Load More Videos';
-                loadMoreButton.disabled = false;
-            }
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        const loadMoreButton = document.getElementById('load-more');
-        loadMoreButton.textContent = 'Error Loading More Videos';
-        loadMoreButton.disabled = true;
-    }
-}
-
-async function initializePage() {
-    try {
-        const response = await fetch(`${WORKER_URL}/api/videos`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const url = nextPageToken
+            ? `${WORKER_URL}/api/videos?pageToken=${nextPageToken}`
+            : `${WORKER_URL}/api/videos`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         nextPageToken = data.nextPageToken;
-        
-        if (data.items && data.items.length > 0) {
-            featuredVideoId = data.items[0].id.videoId;
-            
+
+        const videoGrid = document.getElementById('video-grid');
+        let items = data.items || [];
+
+        // On first load, set featured video and skip it in the grid
+        if (firstLoad && items.length > 0) {
+            featuredVideoId = items[0].id.videoId;
             player = new YT.Player('featured-video-player', {
-                height: '540',
-                width: '960',
+                width: '100%',
+                height: '100%',
                 videoId: featuredVideoId,
                 playerVars: {
                     'playsinline': 1,
@@ -100,11 +75,12 @@ async function initializePage() {
                     'loop': 1,
                     'playlist': featuredVideoId,
                     'showinfo': 0,
-                    'mute': 0, // Start unmuted
+                    'mute': 0,
                     'enablejsapi': 1
                 },
                 events: {
                     'onReady': function(event) {
+                        if (!isMuted) event.target.unMute();
                         event.target.playVideo();
                     },
                     'onStateChange': function(event) {
@@ -114,37 +90,32 @@ async function initializePage() {
                     }
                 }
             });
-
-            const videoGrid = document.getElementById('video-grid');
-            videoGrid.innerHTML = '';
-            
-            createVideoCards(data.items.slice(1), videoGrid);
-
-            if (nextPageToken) {
-                const loadMoreContainer = document.createElement('div');
-                loadMoreContainer.className = 'load-more-container';
-                loadMoreContainer.innerHTML = `
-                    <button id="load-more" class="load-more-button">Load More Videos</button>
-                `;
-                videoGrid.parentNode.insertBefore(loadMoreContainer, videoGrid.nextSibling);
-                document.getElementById('load-more').addEventListener('click', loadMoreVideos);
-            }
+            items = items.slice(1); // Remove featured from grid
+            firstLoad = false;
         }
+        createVideoCards(items, videoGrid);
     } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('video-grid').innerHTML = '<p>Error loading videos. Please try again later.</p>';
+        console.error('Error loading videos:', error);
+        if (firstLoad) {
+            document.getElementById('video-grid').innerHTML = '<p>Error loading videos. Please try again later.</p>';
+        }
     }
+    isLoading = false;
 }
 
 function onYouTubeIframeAPIReady() {
-    initializePage();
+    loadVideosInfinite();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.YT) {
-        initializePage();
-    }
+    // Infinite scroll
+    window.addEventListener('scroll', () => {
+        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 400)) {
+            loadVideosInfinite();
+        }
+    });
 
+    // Mute/unmute button
     const muteButton = document.getElementById('mute-button');
     muteButton.addEventListener('click', () => {
         if (player) {
@@ -158,4 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
             isMuted = !isMuted;
         }
     });
+
+    // If YouTube API is already loaded
+    if (window.YT && window.YT.Player) {
+        onYouTubeIframeAPIReady();
+    }
 });
