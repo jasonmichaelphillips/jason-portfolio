@@ -43,7 +43,6 @@
 
     .social-links a {
       text-decoration: none;
-      background-color: #222;
       border: 1px solid #444;
       padding: 1rem;
       border-radius: 10px;
@@ -52,9 +51,47 @@
       transition: all 0.2s ease-in-out;
     }
 
+    .social-links a.youtube {
+      background-color: #FF0000;
+    }
+
+    .social-links a.facebook {
+      background-color: #1877F3;
+    }
+
+    .social-links a.instagram {
+      background: linear-gradient(45deg, #fd1d1d, #fcb045 60%, #833ab4 100%);
+    }
+
+    .social-links a.tiktok {
+      background-color: #000;
+    }
+
+    .social-links a.twitch {
+      background-color: #9147FF;
+    }
+
+    .social-links a.threads {
+      background-color: #000;
+    }
+
+    .social-links a.twitter {
+      background-color: #222; /* X is mostly black/gray */
+    }
+
+    .social-links a.amazon {
+      background-color: #FFCE00;
+      color: #222;
+      font-weight: bold;
+    }
+
+    .social-links a.email {
+      background-color: #444;
+    }
+
     .social-links a:hover {
-      background-color: #fff;
-      color: #111;
+      filter: brightness(1.1) contrast(1.1);
+      color: #fff;
       transform: scale(1.03);
     }
 
@@ -71,16 +108,16 @@
     <p>Follow me on all platforms below.</p>
     
     <div class="social-links">
-      <a href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank">📺 Main YouTube Channel</a>
-      <a href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank">📺 2nd YouTube Channel</a>
-      <a href="https://www.facebook.com/jasonmichaelphillips" target="_blank">📘 Facebook</a>
-      <a href="https://www.instagram.com/jasonmichaelphillips/" target="_blank">📸 Instagram</a>
-      <a href="https://www.tiktok.com/@jasonmichaelphillips" target="_blank">🎥 TikTok</a>
-      <a href="https://www.twitch.tv/jasonmichaelphillips/" target="_blank">🎮 Twitch</a>
-      <a href="https://www.threads.net/@jasonmichaelphillips" target="_blank">﹫ Threads</a>
-      <a href="https://x.com/jasonmp78" target="_blank">𝕏 Twitter</a>
-      <a href="https://amzn.to/46pz5qd" target="_blank">🛒 Travel Products I Use</a>
-      <a href="mailto:kilter-42gliding@icloud.com">📧 Email Me</a>
+      <a class="youtube" href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank">📺 Main YouTube Channel</a>
+      <a class="youtube" href="https://www.youtube.com/@JasonMichaelPhillips" target="_blank">📺 2nd YouTube Channel</a>
+      <a class="facebook" href="https://www.facebook.com/jasonmichaelphillips" target="_blank">📘 Facebook</a>
+      <a class="instagram" href="https://www.instagram.com/jasonmichaelphillips/" target="_blank">📸 Instagram</a>
+      <a class="tiktok" href="https://www.tiktok.com/@jasonmichaelphillips" target="_blank">🎥 TikTok</a>
+      <a class="twitch" href="https://www.twitch.tv/jasonmichaelphillips/" target="_blank">🎮 Twitch</a>
+      <a class="threads" href="https://www.threads.net/@jasonmichaelphillips" target="_blank">﹫ Threads</a>
+      <a class="twitter" href="https://x.com/jasonmp78" target="_blank">𝕏 Twitter</a>
+      <a class="amazon" href="https://amzn.to/46pz5qd" target="_blank">🛒 Travel Products I Use</a>
+      <a class="email" href="mailto:kilter-42gliding@icloud.com">📧 Email Me</a>
     </div>
   </div>
 </body>
