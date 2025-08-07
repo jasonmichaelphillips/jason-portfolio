@@ -1,4 +1,4 @@
-const CHANNEL_ID = 'UCgR5VYHYy-u_HIiimcYQOMA';
+const PLAYLIST_ID = 'PL0i4Tca5g7T_S5tipX5smaX_b0BjnP_gz';
 const WORKER_URL = 'https://youtubeworker.wickedshrapnel.workers.dev';
 let nextPageToken = '';
 let isMuted = false;
@@ -35,20 +35,19 @@ function createVideoCards(items, container) {
             </div>
         `;
         videoCard.addEventListener('click', () => {
-            loadVideoInPlayer(item.id.videoId);
+            loadVideoInPlayer(item.snippet.resourceId.videoId);
         });
-        // Append at the end to keep reverse chronological order
         container.appendChild(videoCard);
     });
 }
 
 async function loadVideosInfinite() {
-    if (isLoading || !nextPageToken && !firstLoad) return;
+    if (isLoading || (!nextPageToken && !firstLoad)) return;
     isLoading = true;
     try {
         const url = nextPageToken
-            ? `${WORKER_URL}/api/videos?pageToken=${nextPageToken}`
-            : `${WORKER_URL}/api/videos`;
+            ? `${WORKER_URL}/api/playlistItems?playlistId=${PLAYLIST_ID}&pageToken=${nextPageToken}`
+            : `${WORKER_URL}/api/playlistItems?playlistId=${PLAYLIST_ID}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -59,7 +58,7 @@ async function loadVideosInfinite() {
 
         // On first load, set featured video and skip it in the grid
         if (firstLoad && items.length > 0) {
-            featuredVideoId = items[0].id.videoId;
+            featuredVideoId = items[0].snippet.resourceId.videoId;
             player = new YT.Player('featured-video-player', {
                 width: '100%',
                 height: '100%',
