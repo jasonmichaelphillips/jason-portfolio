@@ -119,6 +119,10 @@ main {
 .featured-player-container {
   position: relative;
   width: 100vw;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
   aspect-ratio: 16/9;
   background: #000;
   display: flex;
@@ -414,4 +418,61 @@ footer {
 
 .video-card {
     animation: fadeIn 0.5s ease-out forwards;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  height: 68px;
+  background: rgba(20,20,20,0.7);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 10;
+  box-sizing: border-box;
+  backdrop-filter: blur(8px);
+}
+
+.logo {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: #e50914;
+  letter-spacing: 2px;
+  margin-right: 40px;
+  text-decoration: none;
+  text-shadow: 0 2px 8px #000;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.1rem;
+  opacity: 0.8;
+  transition: opacity 0.2s, color 0.2s;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  opacity: 1;
+  color: #e50914;
+}
+
+.profile {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: url('profile.jpeg') center/cover no-repeat, #333;
+  margin-left: 20px;
+  border: 2px solid #e50914;
+}
+
+.row-title {
+  font-size: 1.4rem;
+  margin: 48px 0 18px 48px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px #000;
 }
