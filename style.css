@@ -11,6 +11,7 @@
     --transition: all 0.3s ease;
 }
 
+
 * {
     margin: 0;
     padding: 0;
@@ -119,8 +120,7 @@ main {
 .featured-player-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 16/9;
-  background: #000;
+  height: 80vh;
   margin-top: 0;
   overflow: hidden;
 }
@@ -201,7 +201,7 @@ main {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
-  padding: 0 48px 48px 24px;
+  padding: 0 48px 48px 48px;
   background: #141414;
 }
 
@@ -315,165 +315,6 @@ footer {
     width: 100%;
     height: 100%;
     object-fit: contain;
-}
-
-/* Split container for contact page */
-.split-container {
-  display: flex;
-  width: 100%;
-  min-height: 100vh;
-  background: #141414;
-}
-
-.contact-sidebar {
-  width: 20%;
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  background: #141414;
-  border-right: 1px solid rgba(255,255,255,0.1);
-  z-index: 100;
-}
-
-.contact-sidebar iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-
-/* Update mobile styles */
-@media (max-width: 768px) {
-  .split-container {
-    flex-direction: column;
-  }
-  
-  .contact-sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-    min-height: 600px; /* Increased to show all content */
-    margin-bottom: 20px;
-  }
-  
-  .contact-sidebar iframe {
-    height: 600px; /* Match the container height */
-    min-height: 600px; /* Ensure consistent height */
-  }
-  
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  /* Additional responsive adjustments */
-  #video-grid {
-    padding: 0 16px 32px 16px;
-    gap: 16px;
-  }
-
-  .video-card:hover {
-    transform: none;
-  }
-}
-
-/* Portrait-specific adjustments */
-@media (max-width: 768px) and (orientation: portrait) {
-  .contact-sidebar {
-    min-height: 650px; /* Even taller for portrait mode */
-  }
-
-  .contact-sidebar iframe {
-    height: 650px;
-    min-height: 650px;
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  .contact-sidebar {
-    width: 25%;
-  }
-  
-  .main-content {
-    margin-left: 25%;
-    width: 75%;
-  }
-}
-
-@media (max-width: 768px) {
-  .split-container {
-    flex-direction: column;
-  }
-  
-  .contact-sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-    min-height: 200px; /* Reduced from 400px */
-    margin-bottom: 20px;
-  }
-  
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-  }
-}
-
-/* Add new media query for portrait mode */
-@media (max-width: 768px) and (orientation: portrait) {
-  .contact-sidebar {
-    position: relative;
-    height: auto;
-    min-height: fit-content;
-    padding-bottom: 20px;
-  }
-
-  .contact-sidebar iframe {
-    height: auto;
-    min-height: 300px; /* Ensure content is visible */
-  }
-}
-
-/* Update existing styles */
-#video-grid {
-  padding: 0 48px 48px 24px;
-}
-
-.featured-player-container {
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #000;
-}
-
-@media (max-width: 1024px) {
-  .contact-sidebar {
-    width: 25%;
-  }
-  
-  .main-content {
-    margin-left: 25%;
-    width: 75%;
-  }
-}
-
-@media (max-width: 768px) {
-  .split-container {
-    flex-direction: column;
-  }
-  
-  .contact-sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-    min-height: 200px; /* Reduced from 400px */
-    margin-bottom: 20px;
-  }
-  
-  .main-content {
-    margin-left: 0;
-    width: 100%;
-  }
 }
 
 /* Responsive design */
@@ -616,29 +457,4 @@ footer {
   color: #fff;
   letter-spacing: 1px;
   text-shadow: 0 2px 8px #000;
-}
-
-/* Page container for contact page */
-.page-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background: #141414;
-}
-
-.contact-header {
-  height: 10vh;
-  width: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 100;
-  background: #141414;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.contact-header iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
 }
