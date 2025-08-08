@@ -148,15 +148,25 @@
 
     <script>
       const headers = {
+        'Content-Type': 'application/json',
         'X-API-Key': 'ut_jHiZvCC9txiWMF8EbRJ53rqnwojxx5i59SiAvGrg'
       };
 
-      // Create a counter if it doesn't exist and increment it
-      fetch('https://counterapi.dev/api/v1/jason-portfolio/count', {
+      // First, let's try to get the current count
+      fetch('https://api.counterapi.dev/v1/counter', {
         method: 'POST',
-        headers: headers
+        headers: headers,
+        body: JSON.stringify({
+          "name": "jason-portfolio",
+          "count": 1
+        })
       })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
         .then(data => {
           document.getElementById('counter').textContent = data.count.toLocaleString();
         })
