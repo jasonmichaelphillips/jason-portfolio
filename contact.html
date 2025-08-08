@@ -142,6 +142,28 @@
       <a class="amazon" href="https://amzn.to/46pz5qd" target="_blank" rel="noopener noreferrer">🛒 Travel Products I Use</a>
       <a class="email" href="mailto:kilter-42gliding@icloud.com" target="_blank" rel="noopener noreferrer">📧 Email Me</a>
     </div>
-  </div>
-</body>
+    <div style="margin-top: 2rem; font-size: 0.9rem; color: #666; text-align: center;">
+      Views: <span id="counter">Loading...</span>
+    </div>
+
+    <script>
+      const headers = {
+        'X-API-Key': 'ut_jHiZvCC9txiWMF8EbRJ53rqnwojxx5i59SiAvGrg'
+      };
+
+      // Create a counter if it doesn't exist and increment it
+      fetch('https://counterapi.dev/api/v1/jason-portfolio/count', {
+        method: 'POST',
+        headers: headers
+      })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('counter').textContent = data.count.toLocaleString();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('counter').textContent = 'Unable to load';
+        });
+    </script>
+  </body>
 </html>
