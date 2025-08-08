@@ -149,26 +149,31 @@
     <script>
       async function incrementCounter() {
         try {
-          const response = await fetch('https://api.counterapi.dev/v1/jason-portfolio-views/up', {
-            method: 'GET',
+          const response = await fetch('https://api.counterapi.dev/v1/counter', {
+            method: 'POST',
             headers: {
+              'Content-Type': 'application/json',
               'Authorization': 'Bearer ut_jHiZvCC9txiWMF8EbRJ53rqnwojxx5i59SiAvGrg'
-            }
+            },
+            body: JSON.stringify({
+              namespace: 'jason-portfolio',
+              name: 'page-views',
+              value: 1
+            })
           });
 
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
 
           const data = await response.json();
-          document.getElementById('counter').textContent = data.count.toLocaleString();
+          document.getElementById('counter').textContent = data.value.toLocaleString();
         } catch (error) {
-          console.error('Error:', error);
-          document.getElementById('counter').textContent = 'Unable To load';
+          console.error('Counter Error:', error);
+          document.getElementById('counter').textContent = 'Unable to load';
         }
       }
 
-      // Call the function when page loads
       incrementCounter();
     </script>
   </body>
