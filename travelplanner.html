@@ -24,7 +24,10 @@
             --tooltip-text: #fff;
             --dot-text: #fff;
             --nav-bg: rgba(255, 253, 248, 0.92);
+            --primary-hover: #15776b;
+            --muted: #999;
             --empty-text: #aaa;
+            --score-bg: #eee;
             --accent: #e76f51;
             --accent-light: #fdece7;
             --good: #2d9d5a;
@@ -322,7 +325,7 @@
             color: #fff;
         }
         .btn-primary:hover {
-            background: #15776b;
+            background: var(--primary-hover);
             transform: translateY(-1px);
             box-shadow: 0 4px 14px rgba(26, 138, 125, 0.3);
         }
@@ -523,15 +526,40 @@
         }
         .empty-state {
             text-align: center;
-            color: #aaa;
+            color: var(--muted);
             padding: 40px 20px;
             font-size: 1rem;
+        }
+        body.dark {
+            --bg: #000;
+            --card: #111;
+            --text: #f4f7fb;
+            --text-light: #a3b1c0;
+            --primary: #5ce4c2;
+            --primary-light: rgba(92, 228, 194, 0.15);
+            --accent: #ff9f76;
+            --accent-light: #2a2a2a;
+            --badge-bg: #111;
+            --input-bg: #111;
+            --detail-bg: #121212;
+            --itinerary-bg: #121212;
+            --tooltip-bg: #f4f7fb;
+            --tooltip-text: #0b0d10;
+            --dot-text: #fff;
+            --nav-bg: rgba(0, 0, 0, 0.9);
+            --border: rgba(255,255,255,0.08);
+            --shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
+            --shadow-lg: 0 8px 34px rgba(0, 0, 0, 0.55);
+            --score-bg: rgba(255, 255, 255, 0.08);
+            --muted: #7b8a9c;
+            --empty-text: #7b8a9c;
+            --primary-hover: #4ed7b4;
         }
         .score-bar {
             height: 6px;
             border-radius: 3px;
             margin-top: 6px;
-            background: #eee;
+            background: var(--score-bg);
             overflow: hidden;
         }
         .score-fill {
@@ -701,7 +729,7 @@
                 <div id="itineraryContent" class="empty-state">
                     <p style="font-size:3rem;">🗺️</p>
                     <p>Select your dates and cities,<br>then click <strong>"Generate Optimized Itinerary"</strong></p>
-                    <p style="font-size:0.8rem;color:#bbb;">We'll automatically avoid rainy seasons & typhoons</p>
+                    <p style="font-size:0.8rem;color:var(--text-light);">We'll automatically avoid rainy seasons & typhoons</p>
                 </div>
             </div>
         </div>
@@ -1115,7 +1143,7 @@
                     <div style="font-size:0.9rem;color:var(--text-light);">${rangeStr} — ${city.allocatedDays} day${city.allocatedDays>1?'s':''}</div>
                     ${flightInfo}
                     <div class="score-bar"><div class="score-fill ${scoreFillClass}" style="width:${scorePercent}%;"></div></div>
-                    <div style="font-size:0.7rem;color:#999;margin-top:2px;">Weather score: ${city.avgScore.toFixed(1)}/10</div>
+                    <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;">Weather score: ${city.avgScore.toFixed(1)}/10</div>
                 </div>`;
                 currentDay = dayRange + 1;
             });
@@ -1172,6 +1200,18 @@
             populateSelectors();
             updateTripDuration();
             initTheme();
+            const flightTo = document.getElementById('flightTo');
+            const flightFrom = document.getElementById('flightFrom');
+            if (flightTo) {
+                flightTo.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') checkFlight();
+                });
+            }
+            if (flightFrom) {
+                flightFrom.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') checkFlight();
+                });
+            }
             // Set default dates for a nice demo
             document.getElementById('startDate').value = '2026-11-15';
             document.getElementById('endDate').value = '2026-12-05';
@@ -1186,14 +1226,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', init);
-
-        // Enter key triggers flight check
-        document.getElementById('flightTo').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') checkFlight();
-        });
-        document.getElementById('flightFrom').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') checkFlight();
-        });
     </script>
 </body>
 </html>
