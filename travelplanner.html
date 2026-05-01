@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SE Asia Travel Planner — Best Weather & Itinerary Builder</title>
+    <style>
+        :root {
+            --bg: #fef9f3;
+            --card: #fffdf8;
+            --text: #2d3436;
+            --text-light: #555;
+            --primary: #1a8a7d;
+            --primary-light: #e0f5f1;
+            --secondary: #f4a261;
+            --secondary-light: #fef3e7;
+            --accent: #e76f51;
+            --accent-light: #fdece7;
+            --good: #2d9d5a;
+            --good-bg: #e6f7ed;
+            --okay: #f4a261;
+            --okay-bg: #fef3e7;
+            --bad: #e76f51;
+            --bad-bg: #fdece7;
+            --typhoon: #c0392b;
+            --typhoon-bg: #fde8e8;
+            --border: #e8ddd0;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.10);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.25s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 253, 248, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            min-height: 60px;
+        }
+        .nav .logo {
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.3px;
+        }
+        .nav .logo span {
+            font-size: 1.6rem;
+        }
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .nav-links a:hover,
+        .nav-links a.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Sections */
+        .section {
+            padding: 40px 24px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+        .section-subtitle {
+            color: var(--text-light);
+            margin-bottom: 28px;
+            font-size: 1.05rem;
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(160deg, #e0f5f1 0%, #fef9f3 30%, #fef3e7 100%);
+            padding: 60px 24px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+            color: #1a5c54;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 650px;
+            margin: 0 auto 20px;
+            color: var(--text-light);
+        }
+        .hero .badge-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .badge.good-w {
+            background: var(--good-bg);
+            color: var(--good);
+            border-color: #b7e4c7;
+        }
+        .badge.bad-w {
+            background: var(--bad-bg);
+            color: var(--bad);
+            border-color: #f5c6b8;
+        }
+
+        /* Country Cards Grid */
+        .countries-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+        .country-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 22px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            cursor: default;
+        }
+        .country-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        .country-card .flag {
+            font-size: 2.4rem;
+            margin-bottom: 4px;
+        }
+        .country-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .country-card .cities {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 10px;
+        }
+        .month-strip {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+        }
+        .month-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            position: relative;
+            cursor: help;
+            letter-spacing: 0;
+        }
+        .month-dot.good {
+            background: var(--good);
+        }
+        .month-dot.okay {
+            background: var(--okay);
+        }
+        .month-dot.bad {
+            background: var(--bad);
+        }
+        .month-dot.typhoon {
+            background: var(--typhoon);
+        }
+        .month-dot[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            align-items: center;
+        }
+        .legend span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend .swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        /* Flight Checker */
+        .flight-checker {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+        }
+        .flight-checker select {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+            background: #fff;
+            min-width: 180px;
+            font-family: inherit;
+        }
+        .flight-checker .arrow {
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .btn {
+            padding: 10px 22px;
+            border-radius: 24px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            font-family: inherit;
+            letter-spacing: -0.2px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #15776b;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(26, 138, 125, 0.3);
+        }
+        .btn-outline {
+            background: #fff;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        .btn-outline:hover {
+            background: var(--primary-light);
+        }
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-accent:hover {
+            background: #d45d3f;
+        }
+        .flight-result {
+            margin-top: 12px;
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .flight-result.yes {
+            background: var(--good-bg);
+            color: var(--good);
+        }
+        .flight-result.no {
+            background: var(--bad-bg);
+            color: var(--bad);
+        }
+
+        /* Itinerary Builder */
+        .builder-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 900px) {
+            .builder-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .builder-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+        .builder-panel h3 {
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .date-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .date-row label {
+            display: flex;
+            flex-direction: column;
+            font-weight: 600;
+            font-size: 0.85rem;
+            gap: 4px;
+            flex: 1;
+            min-width: 140px;
+        }
+        .date-row input[type="date"] {
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        .country-checkboxes {
+            max-height: 380px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 8px;
+        }
+        .country-checkboxes details {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            background: #fefdfa;
+        }
+        .country-checkboxes details summary {
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+        .country-checkboxes details summary .flag-sm {
+            font-size: 1.2rem;
+        }
+        .city-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            margin-top: 6px;
+            padding-left: 20px;
+        }
+        .city-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+        .city-checkboxes label:hover {
+            background: #f9f6f0;
+        }
+        .city-checkboxes input[type="checkbox"] {
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+        }
+        .results-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            min-height: 300px;
+        }
+        .results-panel h3 {
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+        }
+        .itinerary-day {
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--primary);
+            background: #fdfcf8;
+            transition: var(--transition);
+        }
+        .itinerary-day.bad-weather {
+            border-left-color: var(--bad);
+            background: var(--bad-bg);
+        }
+        .itinerary-day.typhoon-warning {
+            border-left-color: var(--typhoon);
+            background: var(--typhoon-bg);
+        }
+        .itinerary-day .day-header {
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .itinerary-day .weather-tag {
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .weather-tag.perfect {
+            background: var(--good-bg);
+            color: var(--good);
+        }
+        .weather-tag.caution {
+            background: var(--okay-bg);
+            color: var(--okay);
+        }
+        .weather-tag.avoid {
+            background: var(--bad-bg);
+            color: var(--bad);
+        }
+        .weather-tag.danger {
+            background: var(--typhoon-bg);
+            color: var(--typhoon);
+        }
+        .flight-indicator {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .flight-indicator.no-direct {
+            color: var(--accent);
+        }
+        .empty-state {
+            text-align: center;
+            color: #aaa;
+            padding: 40px 20px;
+            font-size: 1rem;
+        }
+        .score-bar {
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 6px;
+            background: #eee;
+            overflow: hidden;
+        }
+        .score-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .score-fill.high {
+            background: var(--good);
+        }
+        .score-fill.medium {
+            background: var(--okay);
+        }
+        .score-fill.low {
+            background: var(--bad);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 24px;
+            color: #999;
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+
+        /* Scrollbar */
+        .country-checkboxes::-webkit-scrollbar {
+            width: 5px;
+        }
+        .country-checkboxes::-webkit-scrollbar-thumb {
+            background: #d5ccc0;
+            border-radius: 10px;
+        }
+
+        /* Pulse animation for generate button */
+        @keyframes pulse {
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(26, 138, 125, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 14px rgba(26, 138, 125, 0);
+            }
+        }
+        .btn-generate {
+            animation: pulse 2s infinite;
+        }
+        .btn-generate:hover {
+            animation: none;
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+            .section-title {
+                font-size: 1.4rem;
+            }
+            .month-dot {
+                width: 22px;
+                height: 22px;
+                font-size: 0.6rem;
+                border-radius: 4px;
+            }
+            .flight-checker {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .flight-checker .arrow {
+                text-align: center;
+                transform: rotate(90deg);
+            }
+            .countries-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="logo"><span>🌏</span> SE Asia Weather Planner</div>
+        <div class="nav-links">
+            <a href="#best-times" class="active">Best Times</a>
+            <a href="#flights">Direct Flights</a>
+            <a href="#builder">Itinerary Builder</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <h1>Plan Your Perfect<br>Southeast Asia Trip</h1>
+        <p>Discover the best times to visit each country, find direct flights between cities, and build a custom itinerary that avoids rainy seasons and typhoons.</p>
+        <div class="badge-row">
+            <span class="badge good-w">☀️ Dry Season = Best</span>
+            <span class="badge">🌤️ Shoulder = Okay</span>
+            <span class="badge bad-w">🌧️ Rainy = Avoid</span>
+            <span class="badge" style="background:var(--typhoon-bg);color:var(--typhoon);border-color:#f5b8b8;">🌀 Typhoon Risk</span>
+        </div>
+    </section>
+
+    <!-- Best Times Section -->
+    <section class="section" id="best-times">
+        <h2 class="section-title">📅 Best Times to Visit by Country</h2>
+        <p class="section-subtitle">Hover over each month to see conditions. <strong>Green</strong> = ideal, <strong>Orange</strong> = shoulder, <strong>Red</strong> = rainy/monsoon, <strong>Dark Red</strong> = typhoon risk.</p>
+        <div class="legend">
+            <span><span class="swatch" style="background:var(--good);"></span> Best (Dry & Pleasant)</span>
+            <span><span class="swatch" style="background:var(--okay);"></span> Okay (Shoulder/Transition)</span>
+            <span><span class="swatch" style="background:var(--bad);"></span> Avoid (Heavy Rain/Monsoon)</span>
+            <span><span class="swatch" style="background:var(--typhoon);"></span> 🌀 Typhoon Risk</span>
+        </div>
+        <br>
+        <div class="countries-grid" id="countriesGrid"></div>
+    </section>
+
+    <!-- Direct Flights Section -->
+    <section class="section" id="flights">
+        <h2 class="section-title">✈️ Direct Flight Checker</h2>
+        <p class="section-subtitle">Select two cities to see if they're connected by a direct flight.</p>
+        <div class="flight-checker">
+            <select id="flightFrom">
+                <option value="">-- Departure City --</option>
+            </select>
+            <span class="arrow">⇄</span>
+            <select id="flightTo">
+                <option value="">-- Arrival City --</option>
+            </select>
+            <button class="btn btn-primary" onclick="checkFlight()">Check Direct Flight</button>
+        </div>
+        <div id="flightResult"></div>
+    </section>
+
+    <!-- Itinerary Builder Section -->
+    <section class="section" id="builder">
+        <h2 class="section-title">🧳 Custom Itinerary Builder</h2>
+        <p class="section-subtitle">Enter your travel dates, select the countries & cities you want to visit, and we'll generate an optimized itinerary that avoids rainy seasons and typhoons.</p>
+        <div class="builder-container">
+            <!-- Left Panel: Inputs -->
+            <div class="builder-panel">
+                <h3>📋 Your Travel Plan</h3>
+                <div class="date-row">
+                    <label>Start Date
+                        <input type="date" id="startDate" min="2026-01-01" value="2026-11-15">
+                    </label>
+                    <label>End Date
+                        <input type="date" id="endDate" min="2026-01-01" value="2026-12-05">
+                    </label>
+                </div>
+                <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:10px;">
+                    <strong id="tripDuration">21 days</strong> — Select countries & cities below:
+                </p>
+                <div class="country-checkboxes" id="countryCheckboxes"></div>
+                <br>
+                <button class="btn btn-primary btn-generate" onclick="generateItinerary()" style="width:100%;font-size:1.05rem;padding:14px;">
+                    ✨ Generate Optimized Itinerary
+                </button>
+            </div>
+            <!-- Right Panel: Results -->
+            <div class="results-panel" id="resultsPanel">
+                <h3>🗺️ Your Itinerary</h3>
+                <div id="itineraryContent" class="empty-state">
+                    <p style="font-size:3rem;">🗺️</p>
+                    <p>Select your dates and cities,<br>then click <strong>"Generate Optimized Itinerary"</strong></p>
+                    <p style="font-size:0.8rem;color:#bbb;">We'll automatically avoid rainy seasons & typhoons</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>🌴 SE Asia Travel Planner — Weather data is based on typical seasonal patterns. Always check current forecasts before traveling.</p>
+        <p style="margin-top:4px;">Data covers: Thailand, Vietnam, Cambodia, Laos, Myanmar, Malaysia, Singapore, Indonesia, Philippines & Brunei.</p>
+    </footer>
+
+    <script>
+        // ==================== DATA ====================
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Weather score per month: 10=perfect dry, 7-9=good, 4-6=shoulder, 1-3=rainy, 0=typhoon
+        const countriesData = [{
+            country: 'Thailand',
+            flag: '🇹🇭',
+            cities: [
+                { name: 'Bangkok', code: 'BKK', scores: [9, 9, 7, 5, 4, 3, 3, 3, 2, 4, 8, 9] },
+                { name: 'Chiang Mai', code: 'CNX', scores: [10, 10, 8, 6, 4, 3, 2, 2, 3, 5, 9, 10] },
+                { name: 'Phuket', code: 'HKT', scores: [9, 9, 8, 5, 3, 2, 2, 2, 2, 4, 7, 9] },
+                { name: 'Krabi', code: 'KBV', scores: [9, 9, 8, 5, 3, 2, 2, 2, 2, 4, 7, 9] },
+                { name: 'Koh Samui', code: 'USM', scores: [8, 9, 9, 8, 6, 8, 8, 7, 6, 4, 3, 7] },
+            ]
+        }, {
+            country: 'Vietnam',
+            flag: '🇻🇳',
+            cities: [
+                { name: 'Hanoi', code: 'HAN', scores: [7, 7, 6, 5, 4, 3, 2, 2, 3, 8, 9, 8] },
+                { name: 'Ho Chi Minh City',
+                    code: 'SGN',
+                    scores: [9, 9, 8, 7, 4, 3, 2, 2, 3, 4, 7, 9] },
+                { name: 'Da Nang', code: 'DAD', scores: [6, 7, 8, 9, 8, 7, 6, 5, 3, 3, 4, 5] },
+                { name: 'Nha Trang', code: 'NHA', scores: [7, 8, 9, 9, 8, 7, 7, 7, 5, 3, 3, 5] },
+            ]
+        }, {
+            country: 'Cambodia',
+            flag: '🇰🇭',
+            cities: [
+                { name: 'Siem Reap', code: 'REP', scores: [9, 9, 8, 6, 4, 2, 2, 2, 2, 4, 8, 9] },
+                { name: 'Phnom Penh', code: 'PNH', scores: [9, 9, 8, 6, 4, 2, 2, 2, 2, 4, 8, 9] },
+            ]
+        }, {
+            country: 'Laos',
+            flag: '🇱🇦',
+            cities: [
+                { name: 'Luang Prabang', code: 'LPQ', scores: [9, 9, 8, 6, 5, 3, 2, 2, 3, 5, 8, 9] },
+                { name: 'Vientiane', code: 'VTE', scores: [9, 9, 8, 6, 5, 3, 2, 2, 3, 5, 8, 9] },
+            ]
+        }, {
+            country: 'Myanmar',
+            flag: '🇲🇲',
+            cities: [
+                { name: 'Yangon', code: 'RGN', scores: [9, 9, 7, 5, 3, 1, 1, 1, 2, 5, 8, 9] },
+                { name: 'Mandalay', code: 'MDL', scores: [9, 9, 7, 5, 3, 1, 1, 1, 2, 5, 8, 9] },
+                { name: 'Bagan', code: 'BGN', scores: [9, 9, 7, 5, 3, 1, 1, 1, 2, 5, 8, 9] },
+            ]
+        }, {
+            country: 'Malaysia',
+            flag: '🇲🇾',
+            cities: [
+                { name: 'Kuala Lumpur', code: 'KUL', scores: [8, 8, 5, 5, 7, 8, 8, 7, 6, 5, 4, 6] },
+                { name: 'Penang', code: 'PEN', scores: [8, 8, 6, 4, 4, 7, 8, 7, 5, 4, 4, 6] },
+                { name: 'Langkawi', code: 'LGK', scores: [9, 9, 8, 5, 4, 4, 7, 7, 5, 4, 4, 7] },
+            ]
+        }, {
+            country: 'Singapore',
+            flag: '🇸🇬',
+            cities: [
+                { name: 'Singapore', code: 'SIN', scores: [6, 7, 8, 8, 7, 7, 7, 7, 7, 7, 6, 5] },
+            ]
+        }, {
+            country: 'Indonesia',
+            flag: '🇮🇩',
+            cities: [
+                { name: 'Bali', code: 'DPS', scores: [5, 5, 6, 8, 9, 9, 9, 9, 8, 7, 5, 5] },
+                { name: 'Jakarta', code: 'CGK', scores: [5, 5, 6, 7, 8, 9, 9, 9, 8, 7, 5, 5] },
+                { name: 'Yogyakarta', code: 'JOG', scores: [5, 5, 6, 8, 9, 9, 9, 9, 8, 7, 5, 5] },
+                { name: 'Lombok', code: 'LOP', scores: [5, 5, 6, 8, 9, 9, 9, 9, 8, 7, 5, 5] },
+            ]
+        }, {
+            country: 'Philippines',
+            flag: '🇵🇭',
+            cities: [
+                { name: 'Manila', code: 'MNL', scores: [8, 8, 8, 7, 6, 3, 1, 1, 2, 4, 7, 8] },
+                { name: 'Cebu', code: 'CEB', scores: [8, 8, 8, 7, 6, 3, 1, 1, 2, 4, 7, 8] },
+                { name: 'Palawan', code: 'PPS', scores: [9, 9, 8, 7, 5, 3, 2, 2, 3, 4, 7, 9] },
+                { name: 'Boracay', code: 'BCY', scores: [9, 9, 8, 7, 5, 3, 2, 2, 3, 4, 7, 9] },
+            ]
+        }, {
+            country: 'Brunei',
+            flag: '🇧🇳',
+            cities: [
+                { name: 'Bandar Seri Begawan', code: 'BWN', scores: [8, 8, 7, 5, 4, 3, 3, 3, 4, 4, 5, 6] },
+            ]
+        }];
+
+        // Direct flights (bidirectional graph)
+        const directFlights = new Set();
+        const flightPairs = [
+            ['BKK', 'CNX'],
+            ['BKK', 'HKT'],
+            ['BKK', 'KBV'],
+            ['BKK', 'USM'],
+            ['BKK', 'HAN'],
+            ['BKK', 'SGN'],
+            ['BKK', 'REP'],
+            ['BKK', 'PNH'],
+            ['BKK', 'LPQ'],
+            ['BKK', 'VTE'],
+            ['BKK', 'RGN'],
+            ['BKK', 'KUL'],
+            ['BKK', 'SIN'],
+            ['BKK', 'DPS'],
+            ['BKK', 'CGK'],
+            ['BKK', 'MNL'],
+            ['SIN', 'KUL'],
+            ['SIN', 'DPS'],
+            ['SIN', 'CGK'],
+            ['SIN', 'MNL'],
+            ['SIN', 'SGN'],
+            ['SIN', 'HAN'],
+            ['SIN', 'HKT'],
+            ['SIN', 'PEN'],
+            ['SIN', 'JOG'],
+            ['KUL', 'DPS'],
+            ['KUL', 'CGK'],
+            ['KUL', 'HKT'],
+            ['KUL', 'HAN'],
+            ['KUL', 'SGN'],
+            ['KUL', 'MNL'],
+            ['KUL', 'LGK'],
+            ['KUL', 'PEN'],
+            ['DPS', 'CGK'],
+            ['DPS', 'MNL'],
+            ['DPS', 'SGN'],
+            ['HAN', 'SGN'],
+            ['HAN', 'REP'],
+            ['HAN', 'LPQ'],
+            ['SGN', 'REP'],
+            ['SGN', 'PNH'],
+            ['SGN', 'DAD'],
+            ['MNL', 'CEB'],
+            ['MNL', 'PPS'],
+            ['MNL', 'BCY'],
+            ['MNL', 'DPS'],
+            ['MNL', 'SGN'],
+            ['CGK', 'JOG'],
+            ['CGK', 'DPS'],
+            ['CGK', 'LOP'],
+            ['DPS', 'LOP'],
+            ['REP', 'PNH'],
+            ['RGN', 'MDL'],
+            ['RGN', 'BGN'],
+            ['VTE', 'LPQ'],
+            ['BKK', 'DAD'],
+            ['KUL', 'REP'],
+            ['SIN', 'REP'],
+            ['SIN', 'PNH'],
+            ['BKK', 'MNL'],
+            ['DPS', 'SIN'],
+            ['SIN', 'CEB'],
+        ];
+        flightPairs.forEach(([a, b]) => {
+            directFlights.add(`${a}|${b}`);
+            directFlights.add(`${b}|${a}`);
+        });
+
+        function hasDirectFlight(codeA, codeB) {
+            if (!codeA || !codeB || codeA === codeB) return false;
+            return directFlights.has(`${codeA}|${codeB}`);
+        }
+
+        // Flatten all cities
+        const allCities = [];
+        countriesData.forEach(c => {
+            c.cities.forEach(city => {
+                allCities.push({ ...city, country: c.country, flag: c.flag });
+            });
+        });
+
+        // ==================== RENDER COUNTRY CARDS ====================
+        function renderCountryCards() {
+            const grid = document.getElementById('countriesGrid');
+            grid.innerHTML = countriesData.map(c => {
+                const bestMonths = [];
+                const worstMonths = [];
+                // Aggregate: find best months across all cities in country
+                const avgScores = monthNames.map((_, mi) => {
+                    const sum = c.cities.reduce((acc, city) => acc + city.scores[mi], 0);
+                    return sum / c.cities.length;
+                });
+                avgScores.forEach((s, i) => {
+                    if (s >= 7) bestMonths.push(monthNames[i]);
+                    if (s <= 3) worstMonths.push(monthNames[i]);
+                });
+                const monthDots = avgScores.map((s, i) => {
+                    let cls = 'good';
+                    let tooltip = 'Great weather';
+                    if (s >= 8) { cls = 'good';
+                        tooltip = 'Perfect — dry & pleasant'; } else if (s >= 6) { cls = 'okay';
+                        tooltip = 'Shoulder — mixed conditions'; } else if (s >= 3) { cls = 'bad';
+                        tooltip = 'Rainy/monsoon — expect wet days'; } else { cls = 'typhoon';
+                        tooltip = '⚠️ Typhoon risk — avoid if possible'; }
+                    return `<span class="month-dot ${cls}" data-tooltip="${tooltip}">${monthNames[i]}</span>`;
+                }).join('');
+                return `
+                <div class="country-card">
+                    <div class="flag">${c.flag}</div>
+                    <h3>${c.country}</h3>
+                    <div class="cities">${c.cities.map(ci=>ci.name).join(' · ')}</div>
+                    <div class="month-strip">${monthDots}</div>
+                    <div style="margin-top:8px;font-size:0.8rem;color:var(--text-light);">
+                        <strong>Best:</strong> ${bestMonths.join(', ') || 'varies'}<br>
+                        <strong>Avoid:</strong> ${worstMonths.join(', ') || 'none clearly'}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ==================== POPULATE DROPDOWNS & CHECKBOXES ====================
+        function populateSelectors() {
+            const selects = ['flightFrom', 'flightTo'];
+            const cityOptions = allCities.map(c =>
+                `<option value="${c.code}">${c.flag} ${c.name}, ${c.country} (${c.code})</option>`
+            ).join('');
+            selects.forEach(id => {
+                const sel = document.getElementById(id);
+                sel.innerHTML = '<option value="">-- Select City --</option>' + cityOptions;
+            });
+
+            // Country checkboxes
+            const container = document.getElementById('countryCheckboxes');
+            container.innerHTML = countriesData.map(c => `
+                <details>
+                    <summary><span class="flag-sm">${c.flag}</span> ${c.country} <span style="font-weight:400;font-size:0.8rem;color:#888;">(${c.cities.length} cities)</span></summary>
+                    <div class="city-checkboxes">
+                        ${c.cities.map(city => `
+                            <label>
+                                <input type="checkbox" class="city-cb" data-code="${city.code}" data-country="${c.country}" data-flag="${c.flag}" onchange="onCityToggle()">
+                                ${city.name} (${city.code})
+                            </label>
+                        `).join('')}
+                    </div>
+                </details>
+            `).join('');
+        }
+
+        function getSelectedCities() {
+            const checked = document.querySelectorAll('.city-cb:checked');
+            return Array.from(checked).map(cb => {
+                const code = cb.dataset.code;
+                const cityData = allCities.find(c => c.code === code);
+                return cityData;
+            });
+        }
+
+        function onCityToggle() {
+            const selected = getSelectedCities();
+            const resultsDiv = document.getElementById('itineraryContent');
+            if (selected.length === 0 && !document.getElementById('startDate').value) {
+                resultsDiv.innerHTML =
+                    '<div class="empty-state"><p style="font-size:3rem;">🗺️</p><p>Select your dates and cities,<br>then click <strong>"Generate Optimized Itinerary"</strong></p></div>';
+            }
+            updateTripDuration();
+        }
+
+        function updateTripDuration() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (start && end) {
+                const days = Math.max(1, Math.round((new Date(end) - new Date(start)) / (1000 * 60 * 60 *
+                    24)) + 1);
+                document.getElementById('tripDuration').textContent = days + ' day' + (days > 1 ? 's' : '');
+            }
+        }
+        document.getElementById('startDate').addEventListener('change', updateTripDuration);
+        document.getElementById('endDate').addEventListener('change', updateTripDuration);
+
+        // ==================== FLIGHT CHECKER ====================
+        function checkFlight() {
+            const from = document.getElementById('flightFrom').value;
+            const to = document.getElementById('flightTo').value;
+            const resultDiv = document.getElementById('flightResult');
+            if (!from || !to) {
+                resultDiv.innerHTML =
+                    '<div class="flight-result no">⚠️ Please select both a departure and arrival city.</div>';
+                return;
+            }
+            if (from === to) {
+                resultDiv.innerHTML =
+                '<div class="flight-result no">😅 Same city — no flight needed! Pick two different cities.</div>';
+                return;
+            }
+            if (hasDirectFlight(from, to)) {
+                const cityA = allCities.find(c => c.code === from);
+                const cityB = allCities.find(c => c.code === to);
+                resultDiv.innerHTML =
+                    `<div class="flight-result yes">✅ Yes! There is a <strong>direct flight</strong> between ${cityA.flag} ${cityA.name} (${from}) and ${cityB.flag} ${cityB.name} (${to}).</div>`;
+            } else {
+                const cityA = allCities.find(c => c.code === from);
+                const cityB = allCities.find(c => c.code === to);
+                resultDiv.innerHTML =
+                    `<div class="flight-result no">❌ No direct flight between ${cityA.flag} ${cityA.name} (${from}) and ${cityB.flag} ${cityB.name} (${to}). Consider connecting via a hub like Bangkok (BKK), Singapore (SIN), or Kuala Lumpur (KUL).</div>`;
+            }
+        }
+
+        // ==================== ITINERARY GENERATOR ====================
+        function generateItinerary() {
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            const selectedCities = getSelectedCities();
+            const resultsDiv = document.getElementById('itineraryContent');
+
+            if (!startStr || !endStr) {
+                resultsDiv.innerHTML =
+                    '<div class="empty-state"><p style="font-size:2rem;">⚠️</p><p>Please enter both <strong>start and end dates</strong>.</p></div>';
+                return;
+            }
+            if (selectedCities.length === 0) {
+                resultsDiv.innerHTML =
+                    '<div class="empty-state"><p style="font-size:2rem;">🏙️</p><p>Please select at least <strong>one city</strong> to visit.</p></div>';
+                return;
+            }
+
+            const startDate = new Date(startStr);
+            const endDate = new Date(endStr);
+            if (endDate < startDate) {
+                resultsDiv.innerHTML =
+                    '<div class="empty-state"><p style="font-size:2rem;">📅</p><p>End date must be <strong>after</strong> start date.</p></div>';
+                return;
+            }
+            const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Get all months covered by the trip
+            const coveredMonths = new Set();
+            const iterDate = new Date(startDate);
+            while (iterDate <= endDate) {
+                coveredMonths.add(iterDate.getMonth()); // 0-indexed
+                iterDate.setDate(iterDate.getDate() + 1);
+            }
+            const coveredMonthIndices = Array.from(coveredMonths).sort((a, b) => a - b);
+
+            // Score each selected city
+            const scoredCities = selectedCities.map(city => {
+                let totalScore = 0;
+                let minScore = 10;
+                let hasTyphoon = false;
+                coveredMonthIndices.forEach(mi => {
+                    const s = city.scores[mi];
+                    totalScore += s;
+                    if (s < minScore) minScore = s;
+                    if (s === 0) hasTyphoon = true;
+                });
+                const avgScore = totalScore / coveredMonthIndices.length;
+                return { ...city, avgScore, minScore, hasTyphoon };
+            });
+
+            // Sort by score descending (best weather first)
+            scoredCities.sort((a, b) => b.avgScore - a.avgScore);
+
+            // Distribute days proportionally, minimum 2 days per city
+            const minDaysPerCity = Math.min(2, Math.floor(totalDays / scoredCities.length));
+            const totalMinDays = minDaysPerCity * scoredCities.length;
+            const extraDays = totalDays - totalMinDays;
+            // Allocate extra days to higher-scored cities
+            const allocations = scoredCities.map((city, i) => {
+                let days = minDaysPerCity;
+                if (extraDays > 0 && i < extraDays) days++;
+                return { ...city, allocatedDays: Math.max(1, days) };
+            });
+
+            // Re-sort by score for display
+            allocations.sort((a, b) => b.avgScore - a.avgScore);
+
+            // Build itinerary HTML
+            let currentDay = 1;
+            let html = '';
+            html +=
+                `<p style="margin-bottom:12px;font-weight:600;">📅 Trip: <strong>${startStr}</strong> → <strong>${endStr}</strong> (${totalDays} days) | 🏙️ ${selectedCities.length} cities selected</p>`;
+            html +=
+                `<p style="font-size:0.85rem;color:var(--text-light);margin-bottom:16px;">Cities ordered by <strong>best weather</strong> during your travel window. Rainy/typhoon-prone cities are flagged.</p>`;
+
+            allocations.forEach((city, idx) => {
+                const dayRange = currentDay + city.allocatedDays - 1;
+                const rangeStr = currentDay === dayRange ? `Day ${currentDay}` :
+                    `Days ${currentDay}–${dayRange}`;
+                let weatherClass = 'perfect';
+                let weatherLabel = '☀️ Great weather';
+                let cardClass = '';
+                if (city.hasTyphoon) {
+                    weatherClass = 'danger';
+                    weatherLabel = '🌀 Typhoon risk — reconsider!';
+                    cardClass = 'typhoon-warning';
+                } else if (city.avgScore < 4) {
+                    weatherClass = 'avoid';
+                    weatherLabel = '🌧️ Rainy season — expect wet days';
+                    cardClass = 'bad-weather';
+                } else if (city.avgScore < 6.5) {
+                    weatherClass = 'caution';
+                    weatherLabel = '🌤️ Shoulder season — mixed conditions';
+                }
+
+                const scorePercent = Math.min(100, Math.max(5, city.avgScore * 10));
+                const scoreFillClass = scorePercent >= 70 ? 'high' : scorePercent >= 40 ? 'medium' : 'low';
+
+                // Check direct flight from previous city
+                let flightInfo = '';
+                if (idx > 0) {
+                    const prevCity = allocations[idx - 1];
+                    if (hasDirectFlight(prevCity.code, city.code)) {
+                        flightInfo =
+                            `<div class="flight-indicator">✈️ Direct flight from ${prevCity.name} (${prevCity.code}) → ${city.name} (${city.code})</div>`;
+                    } else {
+                        flightInfo =
+                            `<div class="flight-indicator no-direct">🔗 No direct flight from ${prevCity.name}. Consider flying via BKK, SIN, or KUL.</div>`;
+                    }
+                }
+
+                html += `
+                <div class="itinerary-day ${cardClass}">
+                    <div class="day-header">
+                        <strong>${city.flag} ${city.name}, ${city.country} (${city.code})</strong>
+                        <span class="weather-tag ${weatherClass}">${weatherLabel}</span>
+                    </div>
+                    <div style="font-size:0.9rem;color:var(--text-light);">${rangeStr} — ${city.allocatedDays} day${city.allocatedDays>1?'s':''}</div>
+                    ${flightInfo}
+                    <div class="score-bar"><div class="score-fill ${scoreFillClass}" style="width:${scorePercent}%;"></div></div>
+                    <div style="font-size:0.7rem;color:#999;margin-top:2px;">Weather score: ${city.avgScore.toFixed(1)}/10</div>
+                </div>`;
+                currentDay = dayRange + 1;
+            });
+
+            // Add a summary warning if any city has typhoon risk
+            const typhoonCities = allocations.filter(c => c.hasTyphoon);
+            if (typhoonCities.length > 0) {
+                html += `
+                <div style="margin-top:16px;padding:14px;background:var(--typhoon-bg);border-radius:10px;border:1px solid #f5b8b8;">
+                    <strong>⚠️ Typhoon Warning:</strong> ${typhoonCities.map(c=>c.name).join(', ')} ${typhoonCities.length===1?'has':'have'} typhoon risk during your travel dates. Strongly consider removing or re-timing your visit to these locations.
+                </div>`;
+            }
+            const badCities = allocations.filter(c => !c.hasTyphoon && c.avgScore < 4);
+            if (badCities.length > 0) {
+                html += `
+                <div style="margin-top:8px;padding:14px;background:var(--bad-bg);border-radius:10px;border:1px solid #f5c6b8;">
+                    <strong>🌧️ Rainy Season Note:</strong> ${badCities.map(c=>c.name).join(', ')} will be in peak rainy/monsoon season. Pack accordingly and expect some wet days.
+                </div>`;
+            }
+
+            resultsDiv.innerHTML = html;
+            document.getElementById('resultsPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ==================== INIT ====================
+        function init() {
+            renderCountryCards();
+            populateSelectors();
+            updateTripDuration();
+            // Set default dates for a nice demo
+            document.getElementById('startDate').value = '2026-11-15';
+            document.getElementById('endDate').value = '2026-12-05';
+            updateTripDuration();
+            // Pre-check some cities for demo
+            setTimeout(() => {
+                const preCheck = ['BKK', 'CNX', 'REP', 'DPS', 'SIN'];
+                document.querySelectorAll('.city-cb').forEach(cb => {
+                    if (preCheck.includes(cb.dataset.code)) cb.checked = true;
+                });
+            }, 100);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Enter key triggers flight check
+        document.getElementById('flightTo').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') checkFlight();
+        });
+        document.getElementById('flightFrom').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') checkFlight();
+        });
+    </script>
+</body>
+</html>
