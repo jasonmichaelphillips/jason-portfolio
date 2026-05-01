@@ -14,6 +14,16 @@
             --primary-light: #e0f5f1;
             --secondary: #f4a261;
             --secondary-light: #fef3e7;
+            --hero-bg: linear-gradient(160deg, #e0f5f1 0%, #fef9f3 30%, #fef3e7 100%);
+            --hero-heading: #1a5c54;
+            --badge-bg: #fff;
+            --input-bg: #fff;
+            --detail-bg: #fefdfa;
+            --itinerary-bg: #fdfcf8;
+            --tooltip-bg: #333;
+            --tooltip-text: #fff;
+            --dot-text: #fff;
+            --empty-text: #aaa;
             --accent: #e76f51;
             --accent-light: #fdece7;
             --good: #2d9d5a;
@@ -61,6 +71,11 @@
             flex-wrap: wrap;
             gap: 12px;
             min-height: 60px;
+        }
+        .nav .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
         .nav .logo {
             font-weight: 700;
@@ -116,7 +131,7 @@
 
         /* Hero */
         .hero {
-            background: linear-gradient(160deg, #e0f5f1 0%, #fef9f3 30%, #fef3e7 100%);
+            background: var(--hero-bg);
             padding: 60px 24px;
             text-align: center;
             border-bottom: 1px solid var(--border);
@@ -126,7 +141,7 @@
             font-weight: 800;
             letter-spacing: -1px;
             margin-bottom: 12px;
-            color: #1a5c54;
+            color: var(--hero-heading);
         }
         .hero p {
             font-size: 1.2rem;
@@ -145,7 +160,7 @@
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
-            background: #fff;
+            background: var(--badge-bg);
             border: 1px solid var(--border);
             color: var(--text);
         }
@@ -207,7 +222,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
+            color: var(--dot-text);
             position: relative;
             cursor: help;
             letter-spacing: 0;
@@ -230,8 +245,8 @@
             bottom: 110%;
             left: 50%;
             transform: translateX(-50%);
-            background: #333;
-            color: #fff;
+            background: var(--tooltip-bg);
+            color: var(--tooltip-text);
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 0.7rem;
@@ -276,7 +291,7 @@
             border-radius: var(--radius-sm);
             border: 1px solid var(--border);
             font-size: 0.95rem;
-            background: #fff;
+            background: var(--input-bg);
             min-width: 180px;
             font-family: inherit;
         }
@@ -306,7 +321,7 @@
             box-shadow: 0 4px 14px rgba(26, 138, 125, 0.3);
         }
         .btn-outline {
-            background: #fff;
+            background: var(--badge-bg);
             border: 2px solid var(--primary);
             color: var(--primary);
         }
@@ -395,7 +410,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             padding: 8px 12px;
-            background: #fefdfa;
+            background: var(--detail-bg);
         }
         .country-checkboxes details summary {
             font-weight: 600;
@@ -451,7 +466,7 @@
             margin-bottom: 10px;
             border-radius: var(--radius-sm);
             border-left: 4px solid var(--primary);
-            background: #fdfcf8;
+            background: var(--itinerary-bg);
             transition: var(--transition);
         }
         .itinerary-day.bad-weather {
