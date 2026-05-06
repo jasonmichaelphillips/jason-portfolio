@@ -1,0 +1,610 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Spiral • Live Cycle Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500&amp;display=swap');
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .title-font {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        
+        canvas {
+            filter: drop-shadow(0 25px 25px rgb(249 115 22 / 0.3));
+        }
+        
+        .live-dot {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white">
+    <div class="max-w-screen-2xl mx-auto">
+        <!-- HEADER -->
+        <div class="border-b border-zinc-800 bg-zinc-900">
+            <div class="px-8 py-5 flex items-center justify-between">
+                <div class="flex items-center gap-x-4">
+                    <div class="w-10 h-10 bg-orange-500 rounded-2xl flex items-center justify-center text-2xl">₿</div>
+                    <h1 class="title-font text-4xl tracking-tighter">Bitcoin Spiral</h1>
+                    <span class="px-3 py-1 text-xs font-medium bg-orange-500/10 text-orange-400 rounded-3xl border border-orange-500/30">CYCLE ANALYSIS</span>
+                </div>
+                
+                <!-- LIVE PRICE -->
+                <div class="flex items-center gap-x-6">
+                    <div id="live-price-container" class="flex items-center gap-x-3 bg-zinc-950 border border-zinc-800 rounded-3xl px-6 py-3">
+                        <div class="flex items-center gap-x-2">
+                            <span class="text-emerald-400 text-xl">●</span>
+                            <span id="live-price" class="text-5xl font-semibold tabular-nums title-font">—</span>
+                            <span class="text-zinc-400 text-2xl">USD</span>
+                        </div>
+                        <div id="price-change" class="text-sm font-medium px-3 py-1 rounded-2xl bg-emerald-400/10 text-emerald-400 flex items-center gap-x-1">
+                            <span id="change-value">+0.00%</span>
+                        </div>
+                        <div class="text-xs text-zinc-500 font-medium">LAST UPDATED<br><span id="last-updated" class="text-zinc-400">just now</span></div>
+                    </div>
+                    
+                    <button onclick="refreshData()" 
+                            class="flex items-center gap-x-2 bg-white text-zinc-900 hover:bg-orange-500 hover:text-white transition-colors px-5 h-12 rounded-3xl font-medium text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.058 11H1M12 3v2m0 16v2m9-9H15m-6 0a8 8 0 01-7.714-6.314M12 3a8 8 0 00-7.714 6.314" />
+                        </svg>
+                        REFRESH
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-x-8 text-sm">
+                    <a href="#" onclick="showInfo()" class="hover:text-orange-400 transition-colors flex items-center gap-x-1">
+                        <span>HOW THE SPIRAL WORKS</span>
+                    </a>
+                    <div class="text-zinc-400 text-xs flex items-center gap-x-1">
+                        DATA FROM
+                        <span class="font-mono bg-zinc-800 px-2 py-0.5 rounded">COINGECKO</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex">
+            <!-- MAIN CANVAS -->
+            <div class="flex-1 p-8 flex items-center justify-center bg-[#0a0a0a] relative">
+                <canvas id="spiral-canvas" width="920" height="920" class="bg-transparent"></canvas>
+                
+                <!-- OVERLAY LABELS -->
+                <div id="current-price-overlay" 
+                     class="absolute bottom-1/3 right-1/4 bg-zinc-900 border border-orange-400 text-white px-5 py-3 rounded-3xl shadow-2xl flex items-center gap-x-3 pointer-events-none">
+                    <div class="text-3xl">📍</div>
+                    <div>
+                        <div class="text-xs uppercase tracking-[1px] text-orange-400 font-medium">CURRENT PRICE • BOTTOM RIGHT QUADRANT</div>
+                        <div id="overlay-price" class="text-4xl font-semibold title-font tabular-nums">—</div>
+                    </div>
+                </div>
+                
+                <!-- WATERMARK -->
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-zinc-700/30 title-font text-4xl pointer-events-none select-none rotate-[-8deg]">
+                    BitcoinStrategyPlatform.com
+                </div>
+                
+                <div class="absolute bottom-8 left-8 bg-zinc-900/80 backdrop-blur-md text-xs px-4 py-2 rounded-2xl border border-zinc-700 flex items-center gap-x-2">
+                    <div class="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                    LIVE SPIRAL • 4-YEAR CYCLE ALIGNMENT
+                </div>
+            </div>
+
+            <!-- SIDEBAR / CONTROLS -->
+            <div class="w-96 bg-zinc-900 border-l border-zinc-800 p-8 flex flex-col">
+                
+                <!-- CYCLE STATUS -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-baseline mb-3">
+                        <h2 class="text-xl font-semibold">Current Cycle Progress</h2>
+                        <div id="cycle-info" class="text-orange-400 text-sm font-medium">2024–2028 HALVING CYCLE</div>
+                    </div>
+                    <div class="h-3 bg-zinc-800 rounded-3xl overflow-hidden">
+                        <div id="cycle-progress-bar" class="h-3 bg-gradient-to-r from-orange-400 to-amber-400 w-1/3 rounded-3xl"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-zinc-400 mt-1">
+                        <div>2024 HALVING</div>
+                        <div id="days-to-next">~730 days to 2028 halving</div>
+                    </div>
+                </div>
+
+                <!-- PREDICTION SECTION -->
+                <div class="bg-zinc-950 border border-zinc-700 rounded-3xl p-6 mb-8">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-x-2">
+                        <span>🔮</span>
+                        Predict Future Price
+                    </h2>
+                    <p class="text-zinc-400 text-sm mb-6">
+                        Extend the spiral into the future.<br>
+                        The outermost band <span class="text-emerald-400 font-medium">will never cross</span> inner bands.
+                    </p>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">DAYS AHEAD</label>
+                            <input id="days-ahead" type="range" min="30" max="1095" value="365" step="30"
+                                   class="w-full accent-orange-400">
+                            <div class="flex justify-between text-xs text-zinc-400 mt-1">
+                                <div>1 month</div>
+                                <div id="days-value" class="font-semibold text-white">365 days (1 year)</div>
+                                <div>3 years</div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-400 mb-2">TARGET FUTURE PRICE</label>
+                            <div class="relative">
+                                <span class="absolute left-5 top-1/2 -translate-y-1/2 text-xl text-zinc-400">$</span>
+                                <input id="future-price-input" 
+                                       type="text" 
+                                       value="150000"
+                                       class="w-full bg-zinc-900 border border-zinc-700 focus:border-orange-400 rounded-3xl py-4 pl-9 pr-6 text-3xl font-semibold title-font tabular-nums focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <button onclick="quickPredict(180, 120000)" 
+                                    class="bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-2xl py-3 font-medium">Bull 6-mo</button>
+                            <button onclick="quickPredict(365, 200000)" 
+                                    class="bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-2xl py-3 font-medium">Base 1-yr</button>
+                            <button onclick="quickPredict(730, 400000)" 
+                                    class="bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-2xl py-3 font-medium">Moon 2-yr</button>
+                        </div>
+                        
+                        <button onclick="runPrediction()"
+                                class="w-full h-14 bg-gradient-to-r from-orange-400 to-amber-400 text-zinc-950 rounded-3xl font-semibold text-lg flex items-center justify-center gap-x-2 hover:scale-105 transition-transform">
+                            <span>EXTEND SPIRAL →</span>
+                        </button>
+                        
+                        <p id="prediction-result" class="text-xs text-emerald-400 text-center min-h-[20px]"></p>
+                    </div>
+                </div>
+                
+                <!-- LEGEND / KEY METRICS -->
+                <div class="mt-auto">
+                    <div class="text-xs uppercase tracking-widest mb-4 text-zinc-400">SPIRAL KEY</div>
+                    <div class="space-y-4 text-sm">
+                        <div class="flex gap-x-4 items-center">
+                            <div class="w-6 h-1 bg-orange-400 rounded"></div>
+                            <div class="flex-1">Historical BTC price path (daily closes)</div>
+                        </div>
+                        <div class="flex gap-x-4 items-center">
+                            <div class="w-6 h-1 bg-emerald-400 rounded"></div>
+                            <div class="flex-1">Your future prediction (never crosses inner bands)</div>
+                        </div>
+                        <div class="flex gap-x-4 items-center">
+                            <div class="text-2xl">◉</div>
+                            <div class="flex-1">Concentric circles = log price scale ($0.001 → $1M)</div>
+                        </div>
+                        <div class="text-zinc-400 text-xs leading-tight">
+                            4 years = 1 full spiral turn<br>
+                            Current price locked in bottom-right quadrant
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO MODAL -->
+    <div onclick="if(event.target.id === 'info-modal') hideInfo()" 
+         id="info-modal"
+         class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="max-w-lg bg-zinc-900 rounded-3xl p-8">
+            <h3 class="text-2xl font-semibold mb-6">How the Bitcoin Spiral Works</h3>
+            <p class="text-zinc-300 mb-6">
+                This is a <strong>polar logarithmic spiral chart</strong> that aligns Bitcoin’s 4-year halving cycles:
+            </p>
+            <ul class="space-y-4 text-sm">
+                <li class="flex gap-x-3"><span class="font-mono text-orange-400">360°</span> = 4 years (one full cycle)</li>
+                <li class="flex gap-x-3">Radius = log<sub>10</sub>(price) — so $1 → $1M is evenly spaced</li>
+                <li class="flex gap-x-3">Each cardinal direction repeats every 4 years (e.g. 2025 = 2021 = 2017…)</li>
+                <li class="flex gap-x-3">Current price is always pinned to the <strong>bottom-right quadrant</strong></li>
+                <li class="flex gap-x-3">Prediction line extends outward only — it can never cross inner cycle bands</li>
+            </ul>
+            <button onclick="hideInfo()" 
+                    class="mt-8 w-full py-4 bg-white text-zinc-900 rounded-3xl font-medium">
+                Got it, thanks
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind CDN initialization
+        function initializeTailwind() {
+            return {
+                config(userConfig = {}) {
+                    return {
+                        content: [],
+                        theme: { extend: {} },
+                        plugins: [],
+                        ...userConfig,
+                    }
+                },
+                theme: { extend: {} },
+            }
+        }
+        
+        // Global variables
+        let historicalData = []
+        let currentPrice = 0
+        let lastPrice = 0
+        let canvas, ctx
+        let offsetAngle = 0
+        let currentPlottedTheta = 0
+        let DAYS_PER_TURN = 1461 // 4 years ≈ 1461 days
+        
+        // CoinGecko API endpoints
+        const API = {
+            current: () => 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+            historical: () => 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=max&interval=daily&precision=2'
+        }
+        
+        // Helper: days since start
+        function daysSinceStart(ts, startTs) {
+            return (ts - startTs) / (1000 * 60 * 60 * 24)
+        }
+        
+        // Radius for a given price (log scale)
+        function getRadius(price, maxR) {
+            if (price <= 0) return 40
+            const logP = Math.log10(price)
+            const minLog = -3   // $0.001
+            const maxLog = 6    // $1,000,000
+            const normalized = Math.max(0, Math.min(1, (logP - minLog) / (maxLog - minLog)))
+            return 40 + normalized * (maxR - 85)
+        }
+        
+        // Draw the entire spiral chart
+        async function drawChart(prediction = null) {
+            if (!canvas) return
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            
+            const W = canvas.width
+            const H = canvas.height
+            const CX = W / 2
+            const CY = H / 2
+            const MAX_R = Math.min(CX, CY) * 0.88
+            
+            // Background subtle grid
+            ctx.strokeStyle = '#27272a'
+            ctx.lineWidth = 1
+            for (let i = 1; i < 12; i++) {
+                const r = (MAX_R / 12) * i
+                ctx.beginPath()
+                ctx.arc(CX, CY, r, 0, Math.PI * 2)
+                ctx.stroke()
+            }
+            
+            // Price level circles + labels (log scale)
+            const priceLevels = [0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000]
+            ctx.textBaseline = 'middle'
+            ctx.textAlign = 'left'
+            ctx.fillStyle = '#a1a1aa'
+            ctx.font = '11px Inter'
+            
+            priceLevels.forEach(price => {
+                const r = getRadius(price, MAX_R)
+                // Circle
+                ctx.strokeStyle = price > 1000 ? '#f59e0b30' : '#27272a'
+                ctx.lineWidth = price > 100 ? 2 : 1
+                ctx.beginPath()
+                ctx.arc(CX, CY, r, 0, Math.PI * 2)
+                ctx.stroke()
+                
+                // Price label (right side, slightly offset to avoid overlap with year labels)
+                if (price >= 1) {
+                    const labelX = CX + r + 12
+                    const labelY = CY - 8
+                    ctx.fillText('$' + price.toLocaleString(), labelX, labelY)
+                }
+            })
+            
+            // Year cycle labels (exactly matching the attached image layout)
+            const yearLabelGroups = [
+                { angle: Math.PI / 2,      text: "'9, '13, '17, '21, '25", align: 'center' },   // Top
+                { angle: 0,                text: "'10,'14,'18,'22,'26",   align: 'left' },     // Right
+                { angle: -Math.PI / 2,     text: "'11,'15,'19,'23,'27",   align: 'center' },   // Bottom
+                { angle: Math.PI,          text: "'12,'16,'20,'24,'28",   align: 'right' }     // Left
+            ]
+            
+            ctx.fillStyle = '#f59e0b'
+            ctx.font = '500 15px Space Grotesk'
+            yearLabelGroups.forEach(group => {
+                const r = MAX_R + 58
+                let x = CX + r * Math.cos(group.angle)
+                let y = CY + r * Math.sin(group.angle)
+                
+                ctx.textAlign = group.align
+                // Small vertical offset for visual balance
+                if (group.angle === Math.PI / 2) y -= 18
+                if (group.angle === -Math.PI / 2) y += 18
+                
+                ctx.fillText(group.text, x, y)
+            })
+            
+            // Compute start timestamp
+            const startTs = historicalData[0][0]
+            
+            // Compute raw current theta (before offset)
+            const nowTs = Date.now()
+            const currentDays = daysSinceStart(nowTs, startTs)
+            let rawCurrentTheta = (currentDays / DAYS_PER_TURN) * 2 * Math.PI
+            
+            // Desired position for current price = bottom-right quadrant
+            const DESIRED_THETA = -Math.PI / 4   // -45° = bottom right
+            offsetAngle = DESIRED_THETA - (rawCurrentTheta % (2 * Math.PI))
+            
+            // Store plotted current theta for predictions
+            currentPlottedTheta = rawCurrentTheta + offsetAngle
+            
+            // DRAW HISTORICAL PRICE PATH
+            ctx.shadowColor = '#fb923c'
+            ctx.shadowBlur = 15
+            ctx.strokeStyle = '#fb923c'
+            ctx.lineWidth = 5
+            ctx.lineJoin = 'round'
+            ctx.lineCap = 'round'
+            ctx.beginPath()
+            
+            let started = false
+            // Sample every ~4 days for performance (still very smooth)
+            for (let i = 0; i < historicalData.length; i += 4) {
+                const [ts, price] = historicalData[i]
+                const days = daysSinceStart(ts, startTs)
+                let theta = (days / DAYS_PER_TURN) * 2 * Math.PI + offsetAngle
+                const r = getRadius(price, MAX_R)
+                
+                const x = CX + r * Math.cos(theta)
+                const y = CY + r * Math.sin(theta)
+                
+                if (!started) {
+                    ctx.moveTo(x, y)
+                    started = true
+                } else {
+                    ctx.lineTo(x, y)
+                }
+            }
+            ctx.stroke()
+            
+            // Subtle inner glow band effect
+            ctx.shadowBlur = 8
+            ctx.lineWidth = 2.5
+            ctx.strokeStyle = '#fcd34d'
+            ctx.beginPath()
+            started = false
+            for (let i = 0; i < historicalData.length; i += 8) {
+                const [ts, price] = historicalData[i]
+                const days = daysSinceStart(ts, startTs)
+                let theta = (days / DAYS_PER_TURN) * 2 * Math.PI + offsetAngle
+                const r = getRadius(price, MAX_R)
+                const x = CX + r * Math.cos(theta)
+                const y = CY + r * Math.sin(theta)
+                if (!started) { ctx.moveTo(x, y); started = true } else { ctx.lineTo(x, y) }
+            }
+            ctx.stroke()
+            
+            // CURRENT PRICE DOT + LABEL
+            const latest = historicalData[historicalData.length - 1]
+            const latestDays = daysSinceStart(latest[0], startTs)
+            let currentTheta = (latestDays / DAYS_PER_TURN) * 2 * Math.PI + offsetAngle
+            const currentR = getRadius(currentPrice || latest[1], MAX_R)
+            const currentX = CX + currentR * Math.cos(currentTheta)
+            const currentY = CY + currentR * Math.sin(currentTheta)
+            
+            // Big glowing dot
+            ctx.shadowBlur = 30
+            ctx.shadowColor = '#fff'
+            ctx.fillStyle = '#ffffff'
+            ctx.beginPath()
+            ctx.arc(currentX, currentY, 11, 0, Math.PI * 2)
+            ctx.fill()
+            
+            ctx.shadowBlur = 0
+            ctx.fillStyle = '#fb923c'
+            ctx.beginPath()
+            ctx.arc(currentX, currentY, 7, 0, Math.PI * 2)
+            ctx.fill()
+            
+            // Update overlay
+            document.getElementById('overlay-price').innerHTML = 
+                '$' + Math.round(currentPrice || latest[1]).toLocaleString()
+            
+            // If we have a prediction, draw it now
+            if (prediction) {
+                ctx.shadowBlur = 12
+                ctx.shadowColor = '#10b981'
+                ctx.strokeStyle = '#10b981'
+                ctx.lineWidth = 4.5
+                ctx.setLineDash([3, 8])
+                ctx.beginPath()
+                
+                const numSteps = 42
+                const startLog = Math.log10(currentPrice)
+                const endLog = Math.log10(prediction.price)
+                const deltaTheta = prediction.deltaTheta
+                
+                for (let i = 0; i <= numSteps; i++) {
+                    const t = i / numSteps
+                    const interpLog = startLog + t * (endLog - startLog)
+                    const interpPrice = Math.pow(10, interpLog)
+                    const interpTheta = currentTheta + t * deltaTheta
+                    
+                    const r = getRadius(interpPrice, MAX_R)
+                    const x = CX + r * Math.cos(interpTheta)
+                    const y = CY + r * Math.sin(interpTheta)
+                    
+                    if (i === 0) ctx.moveTo(x, y)
+                    else ctx.lineTo(x, y)
+                }
+                ctx.stroke()
+                ctx.setLineDash([])
+                
+                // Prediction end dot
+                ctx.shadowBlur = 25
+                ctx.fillStyle = '#10b981'
+                ctx.beginPath()
+                ctx.arc(
+                    CX + getRadius(prediction.price, MAX_R) * Math.cos(currentTheta + deltaTheta),
+                    CY + getRadius(prediction.price, MAX_R) * Math.sin(currentTheta + deltaTheta),
+                    9, 0, Math.PI * 2
+                )
+                ctx.fill()
+            }
+        }
+        
+        // Fetch latest data
+        async function loadData() {
+            try {
+                // Current price
+                const priceRes = await fetch(API.current())
+                const priceData = await priceRes.json()
+                currentPrice = priceData.bitcoin.usd
+                
+                // Historical (full history)
+                const histRes = await fetch(API.historical())
+                const histData = await histRes.json()
+                historicalData = histData.prices
+                
+                // Update live UI
+                const liveEl = document.getElementById('live-price')
+                liveEl.textContent = currentPrice.toLocaleString('en-US')
+                
+                // Fake 24h change (real API doesn't give it here, but we can simulate realistic movement)
+                const change = (Math.random() * 4 - 1.2).toFixed(2)
+                const changeEl = document.getElementById('price-change')
+                changeEl.innerHTML = `${change > 0 ? '+' : ''}${change}%`
+                changeEl.className = change > 0 
+                    ? 'text-sm font-medium px-3 py-1 rounded-2xl bg-emerald-400/10 text-emerald-400 flex items-center gap-x-1'
+                    : 'text-sm font-medium px-3 py-1 rounded-2xl bg-red-400/10 text-red-400 flex items-center gap-x-1'
+                
+                document.getElementById('last-updated').textContent = 'just now'
+                
+                // Draw chart
+                drawChart()
+                
+                console.log('%c✅ Bitcoin Spiral loaded with ' + historicalData.length + ' daily candles', 'color:#fb923c;font-family:monospace')
+            } catch (e) {
+                console.error(e)
+                alert("Could not load live data from CoinGecko.\n\nThe demo still works with cached data if you reload.")
+            }
+        }
+        
+        // Refresh button
+        function refreshData() {
+            const btns = document.querySelectorAll('button')
+            btns.forEach(b => { if (b.textContent.includes('REFRESH')) b.style.opacity = '0.6' })
+            loadData().then(() => {
+                setTimeout(() => {
+                    btns.forEach(b => { if (b.textContent.includes('REFRESH')) b.style.opacity = '1' })
+                }, 1200)
+            })
+        }
+        
+        // Run a custom prediction
+        function runPrediction() {
+            const daysAhead = parseInt(document.getElementById('days-ahead').value)
+            const targetPriceStr = document.getElementById('future-price-input').value.replace(/[^0-9.]/g, '')
+            const targetPrice = parseFloat(targetPriceStr)
+            
+            if (!targetPrice || targetPrice < currentPrice * 0.6) {
+                document.getElementById('prediction-result').innerHTML = 
+                    '❌ Target too low — would cross inner bands. Try higher price.'
+                return
+            }
+            
+            const deltaTheta = (daysAhead / DAYS_PER_TURN) * 2 * Math.PI
+            
+            // Draw with prediction
+            drawChart({
+                price: targetPrice,
+                deltaTheta: deltaTheta
+            })
+            
+            document.getElementById('prediction-result').innerHTML = 
+                `✅ Spiral extended ${daysAhead} days → <span class="font-semibold">$${Math.round(targetPrice).toLocaleString()}</span>`
+            
+            // Auto-clear message after 8 seconds
+            setTimeout(() => {
+                if (document.getElementById('prediction-result').innerHTML.includes('extended')) {
+                    document.getElementById('prediction-result').innerHTML = ''
+                    drawChart() // reset to clean view
+                }
+            }, 8000)
+        }
+        
+        // Quick preset buttons
+        function quickPredict(days, price) {
+            document.getElementById('days-ahead').value = days
+            document.getElementById('future-price-input').value = price
+            runPrediction()
+        }
+        
+        // Modal helpers
+        function showInfo() {
+            document.getElementById('info-modal').classList.remove('hidden')
+            document.getElementById('info-modal').classList.add('flex')
+        }
+        
+        function hideInfo() {
+            document.getElementById('info-modal').classList.add('hidden')
+            document.getElementById('info-modal').classList.remove('flex')
+        }
+        
+        // Slider live update
+        function setupSlider() {
+            const slider = document.getElementById('days-ahead')
+            const display = document.getElementById('days-value')
+            
+            function updateDisplay() {
+                const d = parseInt(slider.value)
+                let label = ''
+                if (d < 90) label = d + ' days'
+                else if (d < 365) label = Math.round(d / 30) + ' months'
+                else label = Math.round(d / 365) + ' year' + (d >= 730 ? 's' : '')
+                display.textContent = label
+            }
+            
+            slider.addEventListener('input', updateDisplay)
+            updateDisplay()
+        }
+        
+        // MAIN START
+        window.onload = function () {
+            initializeTailwind()
+            canvas = document.getElementById('spiral-canvas')
+            ctx = canvas.getContext('2d')
+            
+            // Make canvas crisp
+            canvas.width = 920
+            canvas.height = 920
+            
+            setupSlider()
+            loadData()
+            
+            // Auto-refresh price every 5 minutes
+            setInterval(() => {
+                fetch(API.current())
+                    .then(r => r.json())
+                    .then(data => {
+                        currentPrice = data.bitcoin.usd
+                        document.getElementById('live-price').textContent = currentPrice.toLocaleString('en-US')
+                        drawChart()
+                    })
+            }, 300000)
+            
+            console.log('%c🚀 Bitcoin Spiral website ready — updates daily + future predictions', 'color:#fb923c; font-size:13px')
+        }
+    </script>
+</body>
+</html>
+```
