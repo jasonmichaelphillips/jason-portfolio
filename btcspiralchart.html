@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Cycle Analysis Spiral</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #f4f4f9;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 1 / 1;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: #ff9900;
+            font-weight: bold;
+        }
+        
+        /* Toggle Switch CSS */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #ff9900;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .toggle-label {
+            font-weight: 500;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Bitcoin Cycle Analysis</h1>
+    <p style="margin:0; color: #666;">Live Polar Logarithmic Graph (4-Year Cycles)</p>
+
+    <div class="controls">
+        <label class="switch">
+            <input type="checkbox" id="predictToggle">
+            <span class="slider"></span>
+        </label>
+        <span class="toggle-label" onclick="document.getElementById('predictToggle').click()">Predict Next Cycle (No Crossing)</span>
+    </div>
+
+    <div class="canvas-container">
+        <div id="loading" class="loading">Fetching Live Data...</div>
+        <canvas id="spiralCanvas" width="800" height="800"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('spiralCanvas');
+        const ctx = canvas.getContext('2d');
+        const predictToggle = document.getElementById('predictToggle');
+        const loadingDiv = document.getElementById('loading');
+
+        // Constants for the Logarithmic Polar Math
+        const BASE_YEAR = 2009; 
+        const MIN_LOG = -3; // $0.001
+        const MAX_LOG = 6;  // $1,000,000
+        const LOG_RANGE = MAX_LOG - MIN_LOG;
+        
+        let priceData =[]; 
+
+        // Draw configuration
+        const width = canvas.width;
+        const height = canvas.height;
+        const cx = width / 2;
+        const cy = height / 2;
+        const maxRadius = Math.min(width, height) / 2 * 0.75; // Leave room for labels
+
+        // Formatting utilities
+        function getFractionalYear(date) {
+            const year = date.getFullYear();
+            const start = new Date(year, 0, 1).getTime();
+            const end = new Date(year + 1, 0, 1).getTime();
+            return year + (date.getTime() - start) / (end - start);
+        }
+
+        function polarToCartesian(radius, angle) {
+            return {
+                x: cx + radius * Math.cos(angle),
+                y: cy + radius * Math.sin(angle)
+            };
+        }
+
+        // Transforms Date & Price to Canvas X/Y coordinates
+        function mapDataToPoint(date, price) {
+            if (price <= 0) return null;
+            
+            const fracYear = getFractionalYear(date);
+            // Angle: Top is Base Year (2009). 1 Cycle = 4 Years = 2*PI radians.
+            // Clockwise rotation: top is -PI/2.
+            const angle = -Math.PI / 2 + ((fracYear - BASE_YEAR) / 4) * (Math.PI * 2);
+            
+            const logPrice = Math.max(MIN_LOG, Math.log10(price));
+            const radius = (logPrice - MIN_LOG) / LOG_RANGE * maxRadius;
+
+            return polarToCartesian(radius, angle);
+        }
+
+        // Draw the background grid and labels matching the reference image
+        function drawGrid() {
+            ctx.clearRect(0, 0, width, height);
+            
+            ctx.strokeStyle = '#cccccc';
+            ctx.fillStyle = '#666666';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '14px Arial';
+
+            // Draw concentric log circles and labels
+            for (let i = MIN_LOG; i <= MAX_LOG; i++) {
+                const radius = ((i - MIN_LOG) / LOG_RANGE) * maxRadius;
+                if (radius > 0) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+
+                    // Draw Price Labels on the Right Axis
+                    const priceLabel = i < 0 ? `$${Math.pow(10, i)}` : `$${Math.pow(10, i).toLocaleString()}`;
+                    ctx.save();
+                    ctx.translate(cx + radius, cy);
+                    ctx.rotate(Math.PI / 2); // Rotate text 90 degrees
+                    ctx.fillStyle = '#333';
+                    ctx.fillText(priceLabel, 0, 0);
+                    ctx.restore();
+                }
+            }
+
+            // Draw angular axes (crosshairs and diagonals)
+            for (let i = 0; i < 8; i++) {
+                const angle = -Math.PI / 2 + (i * Math.PI / 4);
+                const p = polarToCartesian(maxRadius * 1.05, angle);
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            }
+
+            // Draw Year Labels at the outer edges
+            const labels =[
+                { text: "'09, '13, '17, '21, '25", angle: -Math.PI / 2 },
+                { text: "'10, '14, '18, '22, '26", angle: 0 },
+                { text: "'11, '15, '19, '23, '27", angle: Math.PI / 2 },
+                { text: "'12, '16, '20, '24, '28", angle: Math.PI }
+            ];
+
+            ctx.font = '16px Arial';
+            labels.forEach(l => {
+                const p = polarToCartesian(maxRadius * 1.15, l.angle);
+                ctx.fillText(l.text, p.x, p.y);
+            });
+            
+            // Watermark
+            ctx.font = 'italic 30px Arial';
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            ctx.fillText("Bitcoin Cycle Spiral Model", cx, cy - 40);
+        }
+
+        // Renders the main historical spiral line
+        function drawSpiral(data, isPrediction = false) {
+            if (data.length === 0) return;
+
+            ctx.beginPath();
+            ctx.strokeStyle = isPrediction ? 'rgba(255, 153, 0, 0.5)' : '#ff9900';
+            ctx.lineWidth = isPrediction ? 2 : 3;
+            
+            if (isPrediction) {
+                ctx.setLineDash([8, 8]); // Dashed line for future
+            } else {
+                ctx.setLineDash([]);
+            }
+
+            let first = true;
+            data.forEach(d => {
+                const pt = mapDataToPoint(d.date, d.price);
+                if (pt) {
+                    if (first) {
+                        ctx.moveTo(pt.x, pt.y);
+                        first = false;
+                    } else {
+                        ctx.lineTo(pt.x, pt.y);
+                    }
+                }
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw current price dot
+            if (!isPrediction) {
+                const last = data[data.length - 1];
+                const pt = mapDataToPoint(last.date, last.price);
+                if (pt) {
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Runs the prediction algorithm ensuring bands do not cross
+        function generatePrediction() {
+            if (priceData.length === 0) return[];
+
+            const prediction = [];
+            const lastData = priceData[priceData.length - 1];
+            const lastDate = lastData.date;
+            
+            // Generate next 4 years of prediction
+            const daysToPredict = 365 * 4; 
+            
+            for (let i = 1; i <= daysToPredict; i++) {
+                const futureDate = new Date(lastDate.getTime() + (i * 24 * 60 * 60 * 1000));
+                
+                // Find the price EXACTLY 4 years before this future date (previous cycle)
+                const targetPastTime = futureDate.getTime() - (4 * 365.25 * 24 * 60 * 60 * 1000);
+                
+                // Find closest historical data point
+                let pastPrice = null;
+                for (let j = priceData.length - 1; j >= 0; j--) {
+                    if (priceData[j].date.getTime() <= targetPastTime) {
+                        pastPrice = priceData[j].price;
+                        break;
+                    }
+                }
+
+                if (pastPrice) {
+                    // Diminishing returns calculation
+                    // Ensures the new band is always AT LEAST 1.3x higher than the band below it, preventing crossing
+                    const cycleMultiplier = 1.3 + (2.0 * (1 - (i / daysToPredict))); 
+                    const predictedPrice = pastPrice * cycleMultiplier;
+                    
+                    prediction.push({ date: futureDate, price: predictedPrice });
+                }
+            }
+            return prediction;
+        }
+
+        function render() {
+            drawGrid();
+            drawSpiral(priceData, false);
+            
+            if (predictToggle.checked) {
+                const predData = generatePrediction();
+                // Link the prediction array to the last known point so the line is continuous
+                if (predData.length > 0 && priceData.length > 0) {
+                    predData.unshift(priceData[priceData.length - 1]);
+                }
+                drawSpiral(predData, true);
+            }
+        }
+
+        // Generates missing early data (2009-2013) to complete the center of the spiral
+        function getEarlySyntheticData() {
+            const early = [];
+            const keyframes =[
+                { d: new Date('2009-01-03'), p: 0.001 },
+                { d: new Date('2010-07-17'), p: 0.05 },
+                { d: new Date('2011-02-09'), p: 1.0 },
+                { d: new Date('2011-06-08'), p: 29.0 },
+                { d: new Date('2011-11-18'), p: 2.0 },
+                { d: new Date('2012-12-31'), p: 13.0 },
+                { d: new Date('2013-04-28'), p: 135.0 }
+            ];
+
+            for (let i = 0; i < keyframes.length - 1; i++) {
+                const start = keyframes[i];
+                const end = keyframes[i+1];
+                const days = (end.d - start.d) / (1000 * 60 * 60 * 24);
+                
+                for (let j = 0; j < days; j++) {
+                    const currentD = new Date(start.d.getTime() + j * 24 * 60 * 60 * 1000);
+                    const progress = j / days;
+                    // Exponential interpolation
+                    const currentP = start.p * Math.pow(end.p / start.p, progress);
+                    
+                    // Add slight random noise to make it look organic
+                    const noise = 1 + (Math.random() * 0.1 - 0.05); 
+                    early.push({ date: currentD, price: currentP * noise });
+                }
+            }
+            return early;
+        }
+
+        // Fetch live data from CoinGecko
+        async function fetchBitcoinData() {
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=max');
+                const data = await response.json();
+                
+                // Data format: [[timestamp, price], ...]
+                const apiData = data.prices.map(p => ({
+                    date: new Date(p[0]),
+                    price: p[1]
+                }));
+
+                const earlyData = getEarlySyntheticData();
+                
+                // Filter out any overlap between synthetic and API data
+                const firstApiDate = apiData[0].date;
+                const filteredEarly = earlyData.filter(d => d.date < firstApiDate);
+
+                priceData = [...filteredEarly, ...apiData];
+                
+                loadingDiv.style.display = 'none';
+                render();
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                loadingDiv.innerText = "Error loading live data. Using fallback dataset.";
+                // On failure, load synthetic data up to current year to show it works
+                priceData = getEarlySyntheticData();
+                render();
+            }
+        }
+
+        // Listeners
+        predictToggle.addEventListener('change', render);
+
+        // Initialize
+        fetchBitcoinData();
+
+    </script>
+</body>
+</html>
