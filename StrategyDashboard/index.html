@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MSTR · Medium-Term Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+
+<!-- ============== STICKY NAV ============== -->
+<nav class="topnav">
+  <div class="nav-inner">
+    <a href="#hero" class="brand">
+      <span class="brand-mark">▲</span>
+      <span class="brand-text">MSTR<span class="brand-sub">·dashboard</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#snapshot">Snapshot</a>
+      <a href="#bitcoin">Bitcoin</a>
+      <a href="#mnav">mNAV</a>
+      <a href="#technicals">Technicals</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#analysts">Analysts</a>
+      <a href="#risks">Risks</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============== HERO ============== -->
+<header id="hero" class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-left">
+        <div class="ticker">MSTR</div>
+        <div class="company">Strategy Inc.</div>
+        <div class="price-row">
+          <div class="price">$187.59</div>
+          <div class="badge badge-up">+4.31%</div>
+        </div>
+        <div class="subtitle">Medium-term investment dashboard — May 9, 2026</div>
+        <div class="tagline">
+          <span class="dot"></span>
+          World's largest corporate Bitcoin holder — <strong>818,334 BTC</strong>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="kpi">
+          <div class="kpi-label">mNAV ratio</div>
+          <div class="kpi-value">1.09<span class="kpi-suffix">x</span></div>
+          <div class="kpi-note">Near record-low premium</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Drawdown from 52w high</div>
+          <div class="kpi-value down">−59<span class="kpi-suffix">%</span></div>
+          <div class="kpi-note">52w high $457.22</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Avg analyst target</div>
+          <div class="kpi-value up">$331</div>
+          <div class="kpi-note">+76% upside · 10 analysts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============== SNAPSHOT ============== -->
+<section id="snapshot" class="section">
+  <div class="container">
+    <h2 class="section-title">Snapshot</h2>
+    <p class="section-sub">Key trading and fundamental metrics as of May 8, 2026 close.</p>
+    <div class="metrics-grid" id="metrics-grid"></div>
+  </div>
+</section>
+
+<!-- ============== BITCOIN TREASURY ============== -->
+<section id="bitcoin" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Bitcoin Treasury</h2>
+    <p class="section-sub">MSTR is a leveraged Bitcoin proxy. The treasury — not software revenue — drives the equity story.</p>
+
+    <div class="big-stat">
+      <div class="big-stat-num">818,334 <span class="big-stat-unit">BTC</span></div>
+      <div class="big-stat-row">
+        <div class="big-stat-card">
+          <div class="bsc-label">Fair value @ $80,395</div>
+          <div class="bsc-value">$65.79B</div>
+        </div>
+        <div class="big-stat-card">
+          <div class="bsc-label">Net of LT debt</div>
+          <div class="bsc-value">$57.62B</div>
+        </div>
+        <div class="big-stat-card">
+          <div class="bsc-label">YTD BTC growth</div>
+          <div class="bsc-value">+22%</div>
+        </div>
+        <div class="big-stat-card">
+          <div class="bsc-label">% of total assets</div>
+          <div class="bsc-value">~95%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>MSTR vs. BTC — 18-month relative performance</h3>
+        <div class="chart-sub">Both rebased to 100 at Nov 1, 2024</div>
+      </div>
+      <div class="chart-wrap"><canvas id="relChart"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Equity dilution — diluted shares outstanding</h3>
+        <div class="chart-sub">+50% growth in 5 quarters · Q4'24 and Q1'26 disclosed; intermediate quarters estimated</div>
+      </div>
+      <div class="chart-wrap chart-short"><canvas id="dilutionChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== mNAV CALCULATOR ============== -->
+<section id="mnav" class="section">
+  <div class="container">
+    <h2 class="section-title">mNAV Calculator</h2>
+    <p class="section-sub">Adjust the inputs to see how Bitcoin price, BTC count, debt, share count, and stock price drive net-asset-value and the implied premium / discount.</p>
+
+    <div class="calc-grid">
+      <div class="calc-inputs">
+        <div class="calc-field">
+          <label>BTC price <span id="btcPriceVal" class="val">$80,400</span></label>
+          <input type="range" id="btcPrice" min="30000" max="250000" step="100" value="80400" />
+        </div>
+        <div class="calc-field">
+          <label>BTC held <span id="btcHeldVal" class="val">818,334</span></label>
+          <input type="range" id="btcHeld" min="500000" max="1500000" step="1" value="818334" />
+        </div>
+        <div class="calc-field">
+          <label>Long-term debt <span id="ltDebtVal" class="val">$8.17B</span></label>
+          <input type="range" id="ltDebt" min="0" max="20" step="0.1" value="8.17" />
+        </div>
+        <div class="calc-field">
+          <label>Diluted shares (M) <span id="dilSharesVal" class="val">333.9</span></label>
+          <input type="range" id="dilShares" min="220" max="500" step="0.1" value="333.9" />
+        </div>
+        <div class="calc-field">
+          <label>MSTR price <span id="mstrPriceVal" class="val">$187.59</span></label>
+          <input type="range" id="mstrPrice" min="50" max="800" step="0.5" value="187.59" />
+        </div>
+      </div>
+
+      <div class="calc-outputs">
+        <div class="out-tile"><div class="ot-label">BTC value (gross)</div><div class="ot-val" id="outBtcValue">$65.79B</div></div>
+        <div class="out-tile"><div class="ot-label">NAV net of debt</div><div class="ot-val" id="outNav">$57.62B</div></div>
+        <div class="out-tile"><div class="ot-label">NAV / diluted share</div><div class="ot-val" id="outNavPerShare">$172.57</div></div>
+        <div class="out-tile out-tile-hero">
+          <div class="ot-label">mNAV ratio</div>
+          <div class="ot-val ot-big" id="outMnav">1.087<span class="ot-suffix">x</span></div>
+          <div class="ot-tag" id="outMnavTag">Near 1× — slight premium</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Market cap vs. NAV — premium / discount band</h3>
+        <div class="chart-sub">Updates as you move the sliders above</div>
+      </div>
+      <div class="chart-wrap chart-short"><canvas id="mnavBar"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== TECHNICALS ============== -->
+<section id="technicals" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Technicals & Elliott Wave</h2>
+    <p class="section-sub">Daily close with 50- and 200-day moving averages, plus key Fibonacci retracements from the prior peak ($473.83) to recent low ($107).</p>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>MSTR daily close · MA50 · MA200 · Fib retracements</h3>
+        <div class="chart-sub">Dashed horizontals = Fib levels (23.6 / 38.2 / 50 / 61.8 / 78.6%)</div>
+      </div>
+      <div class="chart-wrap chart-tall"><canvas id="techChart"></canvas></div>
+    </div>
+
+    <div class="tech-row">
+      <div class="levels-card">
+        <h3>Key levels</h3>
+        <table class="levels-table">
+          <tr><td>52-week high</td><td>$457.22</td></tr>
+          <tr><td>52-week low</td><td>$104.17</td></tr>
+          <tr><td>MA20</td><td>$167.35</td></tr>
+          <tr><td>MA50</td><td>$147.41</td></tr>
+          <tr><td>MA200</td><td>$223.46</td></tr>
+          <tr><td>RSI(14)</td><td>59.7</td></tr>
+          <tr><td>Beta vs BTC (252d)</td><td>1.30</td></tr>
+          <tr><td>Annualized vol</td><td>69%</td></tr>
+        </table>
+      </div>
+      <div class="wave-card">
+        <h3>Elliott Wave count</h3>
+        <ul class="wave-list">
+          <li><span class="wtag">Wave (1)</span><span>~$130 (early 2024) → $543 (Nov 2024 peak)</span></li>
+          <li><span class="wtag">Wave (2)</span><span>$543 → $104 low (Apr 2026) — deep ABC zigzag, 78.6% retrace</span></li>
+          <li><span class="wtag wtag-hot">Wave (3)?</span><span>Possibly early stages from $107 base · projection $330–$590 (1.618×–2.618×)</span></li>
+          <li><span class="wtag wtag-warn">Invalidation</span><span>Sustained close below $104 breaks the count</span></li>
+        </ul>
+        <div class="wave-foot">Stock is currently bouncing off the 78.6% Fib at $185 — the line in the sand for the bull count.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCENARIOS ============== -->
+<section id="scenarios" class="section">
+  <div class="container">
+    <h2 class="section-title">Scenario builder</h2>
+    <p class="section-sub">Choose a preset or move the sliders. Forward capital structure assumes ~360M diluted shares and $8.2B long-term debt.</p>
+
+    <div class="scen-grid">
+      <div class="scen-controls">
+        <div class="scen-presets">
+          <label class="scen-radio"><input type="radio" name="preset" value="bear"><span>Bear · BTC $60K · 0.9×</span></label>
+          <label class="scen-radio"><input type="radio" name="preset" value="base" checked><span>Base · BTC $100K · 1.2×</span></label>
+          <label class="scen-radio"><input type="radio" name="preset" value="bull"><span>Bull · BTC $150K · 1.5×</span></label>
+          <label class="scen-radio"><input type="radio" name="preset" value="sky"><span>Blue Sky · BTC $200K · 1.8×</span></label>
+        </div>
+
+        <div class="calc-field">
+          <label>BTC price <span id="scenBtcVal" class="val">$100,000</span></label>
+          <input type="range" id="scenBtc" min="50000" max="250000" step="1000" value="100000" />
+        </div>
+        <div class="calc-field">
+          <label>mNAV ratio <span id="scenMnavVal" class="val">1.20x</span></label>
+          <input type="range" id="scenMnav" min="0.7" max="2.5" step="0.05" value="1.20" />
+        </div>
+      </div>
+
+      <div class="scen-outputs">
+        <div class="out-tile"><div class="ot-label">BTC value (818K BTC)</div><div class="ot-val" id="scenBtcVal2">$81.8B</div></div>
+        <div class="out-tile"><div class="ot-label">NAV / share</div><div class="ot-val" id="scenNavPS">$204</div></div>
+        <div class="out-tile out-tile-hero">
+          <div class="ot-label">MSTR target</div>
+          <div class="ot-val ot-big" id="scenTarget">$245</div>
+          <div class="ot-tag up" id="scenReturn">+30.5% from $187.59</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Preset scenarios vs. current price</h3>
+        <div class="chart-sub">Vertical line marks today's $187.59</div>
+      </div>
+      <div class="chart-wrap chart-short"><canvas id="scenChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== ANALYSTS ============== -->
+<section id="analysts" class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Analyst targets</h2>
+    <p class="section-sub">Most recent published targets across covering firms. Consensus: <strong>Strong Buy</strong> · 10 analysts · 90% bullish.</p>
+
+    <div class="cons-row">
+      <div class="cons-tile"><div class="ct-label">Average</div><div class="ct-val">$331</div><div class="ct-sub up">+76%</div></div>
+      <div class="cons-tile"><div class="ct-label">Median</div><div class="ct-val">$335</div><div class="ct-sub up">+78%</div></div>
+      <div class="cons-tile"><div class="ct-label">High</div><div class="ct-val up">$570</div><div class="ct-sub">Benchmark</div></div>
+      <div class="cons-tile"><div class="ct-label">Low</div><div class="ct-val down">$54</div><div class="ct-sub">Wells Fargo</div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Targets by firm</h3>
+        <div class="chart-sub">Vertical line marks current price $187.59</div>
+      </div>
+      <div class="chart-wrap chart-tall"><canvas id="analystChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== CATALYSTS ============== -->
+<section id="catalysts" class="section">
+  <div class="container">
+    <h2 class="section-title">Catalysts timeline</h2>
+    <p class="section-sub">Key events to watch over the next 12 months.</p>
+    <ol class="timeline">
+      <li>
+        <div class="tl-date">Jul 30, 2026</div>
+        <div class="tl-card">
+          <h4>Q2 2026 earnings</h4>
+          <p>Watch BTC purchases pace, mNAV trajectory, software revenue, and dividend coverage on the preferred stack.</p>
+        </div>
+      </li>
+      <li>
+        <div class="tl-date">Aug – Dec 2026</div>
+        <div class="tl-card">
+          <h4>BTC price trajectory</h4>
+          <p>Consensus 2026 year-end forecasts span <strong>$90K–$170K</strong> (CoinShares, Standard Chartered). Wide bear range $75K–$225K.</p>
+        </div>
+      </li>
+      <li>
+        <div class="tl-date">Oct 30, 2026</div>
+        <div class="tl-card">
+          <h4>Q3 2026 earnings</h4>
+          <p>Critical update on dilution pace, BTC accumulation, and balance-sheet positioning ahead of 2027 maturities.</p>
+        </div>
+      </li>
+      <li>
+        <div class="tl-date">Feb 15, 2027</div>
+        <div class="tl-card">
+          <h4>0% convertible maturity (~$1B)</h4>
+          <p>First major near-term debt event. Refi or conversion mechanics will be a market signal for the broader convert stack.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============== BULL VS BEAR ============== -->
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">Bull vs. Bear</h2>
+    <div class="bb-grid">
+      <div class="bb-card bb-bull">
+        <div class="bb-header"><span class="bb-pill bb-pill-bull">Bull</span></div>
+        <ul>
+          <li>Leveraged BTC accumulation = compounding engine. 818K BTC, 22% YTD growth.</li>
+          <li>mNAV compressed near 1× — de-risked entry; structural premium can re-expand.</li>
+          <li>Software still profitable ($124M Q1, +12% YoY); funds dividend obligations.</li>
+          <li>90% of analysts bullish · +76% to consensus · +204% to high.</li>
+          <li>Wave (3) base potentially in place; technicals firming.</li>
+        </ul>
+      </div>
+      <div class="bb-card bb-bear">
+        <div class="bb-header"><span class="bb-pill bb-pill-bear">Bear</span></div>
+        <ul>
+          <li>Leverage cuts both ways: 1.30 beta to BTC, 69% annualized vol, –59% drawdown.</li>
+          <li>+50% diluted-share growth in 15 months — persistent equity dilution.</li>
+          <li>~$10.6B preferred dividend stack — fixed cash drag even if BTC sinks.</li>
+          <li>$14.5B Q1 unrealized loss; deferred-tax-asset valuation allowance flagged.</li>
+          <li>Death cross intact; BTC could spend more time in $60–90K range.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== RISKS / FOOTER ============== -->
+<section id="risks" class="section">
+  <div class="container">
+    <h2 class="section-title">Key risks</h2>
+    <ul class="risk-list">
+      <li><strong>BTC price dominance.</strong> Bitcoin drives &gt;90% of asset value. MSTR has high beta and correlation to it.</li>
+      <li><strong>Capital structure.</strong> Convertible debt + multiple preferred classes create fixed claims senior to common stock.</li>
+      <li><strong>Volatility.</strong> 69% annualized realized vol — position sizing matters.</li>
+      <li><strong>Accounting.</strong> FASB ASU 2023-08 fair-value rule causes large mark-to-market swings in reported earnings.</li>
+      <li><strong>Substitution risk.</strong> Spot BTC ETFs reduce structural reasons for an MSTR premium.</li>
+    </ul>
+    <div class="disclaimer">
+      Research and analysis only; not personalized financial advice. Data: Strategy Inc. disclosures, market quotes, and analyst publications as of May 8, 2026.
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="container">
+    <div>MSTR Medium-Term Dashboard · Built May 9, 2026</div>
+    <div class="foot-sub">Single-page interactive view · Inputs are illustrative scenarios</div>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="transform:translate(-${scrollX}px,-${scrollY}px);transform-origin:top left">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>
