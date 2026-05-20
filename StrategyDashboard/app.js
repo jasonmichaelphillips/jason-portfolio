@@ -1,5 +1,60 @@
 /* MSTR dashboard interactions */
 
+// Initialize with live data from backend
+(async function() {
+  try {
+    const res = await fetch('http://localhost:3000/api/finance');
+    const liveData = await res.json();
+    if (liveData.aligned && liveData.aligned.length > 0) {
+      window.ALIGNED = liveData.aligned;
+      window.LIVE_CURRENT = liveData.current;
+    }
+  } catch(e) {
+    console.log("Failed to fetch live data, using static data:", e);
+  }
+  initDashboard();
+})();
+
+function initDashboard() {
+  if (!window.ALIGNED) window.ALIGNED = ALIGNED;
+  const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
+  const CURR_BTC = window.LIVE_CURRENT ? window.LIVE_CURRENT.btc : 80400;
+  
+  // Update hero section
+  if (window.LIVE_CURRENT) {
+    document.getElementById('heroMstrPrice').textContent = '$' + CURR_PRICE.toLocaleString('en-US', {maximumFractionDigits: 2});
+    document.getElementById('heroDate').textContent = 'Medium-term investment dashboard — ' + new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+  }
+  
+  // Update slider values to live data
+  const btcPriceSlider = document.getElementById('btcPrice');
+  const mstrPriceSlider = document.getElementById('mstrPrice');
+  if (btcPriceSlider) btcPriceSlider.value = CURR_BTC;
+  if (mstrPriceSlider) mstrPriceSlider.value = CURR_PRICE;
+  
+  // Update BTC info
+  const btcN = 818334;
+  const debt = 8.17e9;
+  const btcValue = CURR_BTC * btcN;
+  const navNet = btcValue - debt;
+  document.getElementById('btcFairValueLabel').textContent = 'Fair value @ $' + CURR_BTC.toLocaleString('en-US', {maximumFractionDigits: 0});
+  document.getElementById('btcFairValue').textContent = '$' + (btcValue / 1e9).toFixed(2) + 'B';
+  document.getElementById('btcNetDebt').textContent = '$' + (navNet / 1e9).toFixed(2) + 'B';
+  
+  // Update date references
+  document.querySelectorAll('#metricsDate').forEach(el => {
+    el.textContent = new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+  });
+  document.getElementById('footerDate').textContent = new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+  document.querySelectorAll('.dynPrice').forEach(el => {
+    el.textContent = '$' + CURR_PRICE.toLocaleString('en-US', {maximumFractionDigits: 2});
+  });
+  
+  // Re-trigger scenario computation with live price
+  if (typeof recomputeScen === 'function') recomputeScen();
+  if (typeof recomputeMnav === 'function') recomputeMnav();
+}
+
 const COLORS = {
   gold: '#F7931A',
   goldSoft: 'rgba(247,147,26,0.12)',
@@ -299,6 +354,7 @@ const scenMnav = document.getElementById('scenMnav');
 let scenChart;
 
 function recomputeScen(){
+  const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
   const btcP = +scenBtc.value;
   const mnav = +scenMnav.value;
   const btcVal = btcP * FWD_BTC;
@@ -313,7 +369,7 @@ function recomputeScen(){
   document.getElementById('scenNavPS').textContent = fmtMoney(navPS,0);
   document.getElementById('scenTarget').textContent = fmtMoney(target,0);
   const tag = document.getElementById('scenReturn');
-  tag.textContent = (ret>=0?'+':'')+ret.toFixed(1)+'% from $187.59';
+  tag.textContent = (ret>=0?'+':'')+ret.toFixed(1)+'% from $'+CURR_PRICE.toLocaleString('en-US',{maximumFractionDigits:2});
   tag.className = 'ot-tag '+(ret>=0?'up':'down');
   paintSliders();
 }
@@ -340,6 +396,7 @@ recomputeScen();
   const currLine = {
     id:'currLine',
     afterDatasetsDraw(chart){
+      const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
       const {ctx, chartArea, scales:{x}} = chart;
       const xp = x.getPixelForValue(CURR_PRICE);
       ctx.save();
@@ -386,6 +443,7 @@ recomputeScen();
   const refLines = {
     id:'refLines',
     afterDatasetsDraw(chart){
+      const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
       const {ctx, chartArea, scales:{x}} = chart;
       [{v:CURR_PRICE,c:'rgba(255,255,255,0.75)',l:`Now $${CURR_PRICE}`},
        {v:avgT, c:'rgba(247,147,26,0.85)', l:`Avg $${avgT}`}].forEach(o=>{

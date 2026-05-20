@@ -40,10 +40,10 @@
         <div class="ticker">MSTR</div>
         <div class="company">Strategy Inc.</div>
         <div class="price-row">
-          <div class="price">$187.59</div>
-          <div class="badge badge-up">+4.31%</div>
+          <div class="price" id="heroMstrPrice">$187.59</div>
+          <div class="badge badge-up" id="heroMstrChange">+4.31%</div>
         </div>
-        <div class="subtitle">Medium-term investment dashboard — May 9, 2026</div>
+        <div class="subtitle" id="heroDate">Medium-term investment dashboard — May 9, 2026</div>
         <div class="tagline">
           <span class="dot"></span>
           World's largest corporate Bitcoin holder — <strong>818,334 BTC</strong>
@@ -52,12 +52,12 @@
       <div class="hero-right">
         <div class="kpi">
           <div class="kpi-label">mNAV ratio</div>
-          <div class="kpi-value">1.09<span class="kpi-suffix">x</span></div>
-          <div class="kpi-note">Near record-low premium</div>
+          <div class="kpi-value"><span id="heroMnavRatio">1.09</span><span class="kpi-suffix">x</span></div>
+          <div class="kpi-note" id="heroMnavNote">Near record-low premium</div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Drawdown from 52w high</div>
-          <div class="kpi-value down">−59<span class="kpi-suffix">%</span></div>
+          <div class="kpi-value down"><span id="heroDrawdown">−59</span><span class="kpi-suffix">%</span></div>
           <div class="kpi-note">52w high $457.22</div>
         </div>
         <div class="kpi">
@@ -74,7 +74,7 @@
 <section id="snapshot" class="section">
   <div class="container">
     <h2 class="section-title">Snapshot</h2>
-    <p class="section-sub">Key trading and fundamental metrics as of May 8, 2026 close.</p>
+    <p class="section-sub">Key trading and fundamental metrics as of <span id="metricsDate">May 8, 2026</span> close.</p>
     <div class="metrics-grid" id="metrics-grid"></div>
   </div>
 </section>
@@ -89,12 +89,12 @@
       <div class="big-stat-num">818,334 <span class="big-stat-unit">BTC</span></div>
       <div class="big-stat-row">
         <div class="big-stat-card">
-          <div class="bsc-label">Fair value @ $80,395</div>
-          <div class="bsc-value">$65.79B</div>
+          <div class="bsc-label" id="btcFairValueLabel">Fair value @ $80,395</div>
+          <div class="bsc-value" id="btcFairValue">$65.79B</div>
         </div>
         <div class="big-stat-card">
           <div class="bsc-label">Net of LT debt</div>
-          <div class="bsc-value">$57.62B</div>
+          <div class="bsc-value" id="btcNetDebt">$57.62B</div>
         </div>
         <div class="big-stat-card">
           <div class="bsc-label">YTD BTC growth</div>
@@ -258,7 +258,7 @@
     <div class="chart-card">
       <div class="chart-header">
         <h3>Preset scenarios vs. current price</h3>
-        <div class="chart-sub">Vertical line marks today's $187.59</div>
+        <div class="chart-sub">Vertical line marks today's <span class="dynPrice">$187.59</span></div>
       </div>
       <div class="chart-wrap chart-short"><canvas id="scenChart"></canvas></div>
     </div>
@@ -281,7 +281,7 @@
     <div class="chart-card">
       <div class="chart-header">
         <h3>Targets by firm</h3>
-        <div class="chart-sub">Vertical line marks current price $187.59</div>
+        <div class="chart-sub">Vertical line marks current price <span class="dynPrice">$187.59</span></div>
       </div>
       <div class="chart-wrap chart-tall"><canvas id="analystChart"></canvas></div>
     </div>
@@ -367,14 +367,14 @@
       <li><strong>Substitution risk.</strong> Spot BTC ETFs reduce structural reasons for an MSTR premium.</li>
     </ul>
     <div class="disclaimer">
-      Research and analysis only; not personalized financial advice. Data: Strategy Inc. disclosures, market quotes, and analyst publications as of May 8, 2026.
+      Research and analysis only; not personalized financial advice. Data: Strategy Inc. disclosures, market quotes, and analyst publications as of <span id="metricsDate">May 8, 2026</span>.
     </div>
   </div>
 </section>
 
 <footer class="foot">
   <div class="container">
-    <div>MSTR Medium-Term Dashboard · Built May 9, 2026</div>
+    <div>MSTR Medium-Term Dashboard · Built <span id="footerDate">May 9, 2026</span></div>
     <div class="foot-sub">Single-page interactive view · Inputs are illustrative scenarios</div>
   </div>
 </footer>
