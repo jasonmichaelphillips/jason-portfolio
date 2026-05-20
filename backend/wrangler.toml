@@ -2,7 +2,7 @@ name = "mstr-finance-api"
 type = "javascript"
 account_id = "f0fa40113eec40b0791d5b13a7c767f8"
 workers_dev = true
-route = "https://jasonmichaelphillips.com/api/finance"
+route = "jasonmichaelphillips.com/api/finance"
 zone_id = "637f31bcc313d95b0fe799ecedf1dc78"
 
 [build]
