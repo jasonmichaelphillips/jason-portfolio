@@ -3,7 +3,7 @@ type = "javascript"
 account_id = "PASTE_YOUR_ACCOUNT_ID_HERE"
 workers_dev = true
 route = "https://jasonmichaelphillips.com/api/finance"
-zone_id = "PASTE_YOUR_ZONE_ID_HERE"
+zone_id = "637f31bcc313d95b0fe799ecedf1dc78"
 
 [build]
 command = "npm install"
