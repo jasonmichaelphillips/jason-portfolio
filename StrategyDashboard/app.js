@@ -60,6 +60,9 @@ function initDashboard() {
   // Re-trigger scenario computation with live price
   if (typeof recomputeScen === 'function') recomputeScen();
   if (typeof recomputeMnav === 'function') recomputeMnav();
+
+  // Render dynamic metrics grid with live prices
+  renderMetrics(CURR_PRICE, CURR_BTC);
 }
 
 const COLORS = {
@@ -90,23 +93,38 @@ const fmtCompact = (n) => {
   return '$'+n.toFixed(0);
 };
 
-/* ============== METRICS GRID ============== */
-const metrics = [
-  {label:'Price',          value:'$187.59', sub:'+4.31% (after-hours)'},
-  {label:'Market cap (diluted)', value:'$62.6B', sub:'333.9M diluted shares'},
-  {label:'Reported market cap', value:'$55.73B', sub:'basic share count'},
-  {label:'52-week range',  value:'$104.17 – $457.22', sub:'Drawdown −59% from high'},
-  {label:'Volume',         value:'15.7M', sub:'avg 19.8M'},
-  {label:'TTM EPS',        value:'−$36.99', sub:'BTC mark-to-market'},
-  {label:'BTC reference',  value:'$80,395', sub:'−36% from 52w high'},
-  {label:'BTC held',       value:'818,334', sub:'$65.79B fair value'},
-  {label:'Long-term debt', value:'$8.17B',  sub:'convertible notes'},
-  {label:'Cash',           value:'$2.21B',  sub:'Q1 2026'},
-  {label:'Total assets',   value:'$54.27B', sub:'Q1 2026'},
-  {label:'Annualized vol', value:'69%',     sub:'beta 1.30 vs BTC'}
-];
-{
+/* ============== METRICS GRID (dynamic with live data) ============== */
+function renderMetrics(price, btc) {
   const grid = document.getElementById('metrics-grid');
+  if (!grid) return;
+  grid.innerHTML = ''; // clear previous
+
+  const dilutedShares = 333.9e6;
+  const basicShares = 297.4e6; // approx
+  const btcHeld = 818334;
+  const debt = 8.17e9;
+  const cash = 2.21e9;
+  const assets = 54.27e9;
+
+  const mktCapDil = price * dilutedShares;
+  const mktCapBasic = price * basicShares;
+  const btcFair = btc * btcHeld;
+
+  const metrics = [
+    {label:'Price',          value:'$'+price.toLocaleString('en-US',{maximumFractionDigits:2}), sub:'Live from Yahoo Finance'},
+    {label:'Market cap (diluted)', value:fmtBn(mktCapDil), sub:'333.9M diluted shares'},
+    {label:'Reported market cap', value:fmtBn(mktCapBasic), sub:'~297M basic shares'},
+    {label:'52-week range',  value:'$104.17 – $457.22', sub:'Drawdown −59% from high'},
+    {label:'Volume',         value:'15.7M', sub:'avg 19.8M'},
+    {label:'TTM EPS',        value:'−$36.99', sub:'BTC mark-to-market'},
+    {label:'BTC reference',  value:'$'+btc.toLocaleString('en-US',{maximumFractionDigits:0}), sub:'Live price'},
+    {label:'BTC held',       value:btcHeld.toLocaleString('en-US'), sub:fmtBn(btcFair)+' fair value'},
+    {label:'Long-term debt', value:'$8.17B',  sub:'convertible notes'},
+    {label:'Cash',           value:'$2.21B',  sub:'Q1 2026'},
+    {label:'Total assets',   value:'$54.27B', sub:'Q1 2026'},
+    {label:'Annualized vol', value:'69%',     sub:'beta 1.30 vs BTC'}
+  ];
+
   metrics.forEach(m => {
     const el = document.createElement('div');
     el.className = 'metric';
@@ -354,7 +372,7 @@ const SCEN_PRESET_TARGETS = { bear:103, base:245, bull:477, sky:777 };
 const FWD_SHARES = 360e6;
 const FWD_DEBT = 8.2e9;
 const FWD_BTC = 818334;
-const CURR_PRICE = 187.59;
+// CURR_PRICE now comes from window.LIVE_CURRENT set in initDashboard
 
 const scenBtc = document.getElementById('scenBtc');
 const scenMnav = document.getElementById('scenMnav');
