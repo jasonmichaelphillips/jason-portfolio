@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 
 const API_KEY = process.env.YOUTUBE_API_KEY;
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.get('/api/videos', async (req, res) => {
     try {

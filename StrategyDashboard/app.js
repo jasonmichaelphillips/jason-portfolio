@@ -3,7 +3,14 @@
 // Initialize with live data from backend
 (async function() {
   try {
-    const res = await fetch('http://localhost:3000/api/finance');
+    // Determine API endpoint: use localhost for local development, otherwise use current domain
+    let apiUrl = 'http://localhost:3000/api/finance';
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== 'file:') {
+      // We're on a deployed domain - use the same domain for the API
+      apiUrl = `${window.location.protocol}//${window.location.hostname}/api/finance`;
+    }
+    
+    const res = await fetch(apiUrl);
     const liveData = await res.json();
     if (liveData.aligned && liveData.aligned.length > 0) {
       window.ALIGNED = liveData.aligned;
