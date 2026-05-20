@@ -1,0 +1,13 @@
+name = "mstr-finance-api"
+type = "javascript"
+account_id = "PASTE_YOUR_ACCOUNT_ID_HERE"
+workers_dev = true
+route = "https://jasonmichaelphillips.com/api/finance"
+zone_id = "PASTE_YOUR_ZONE_ID_HERE"
+
+[build]
+command = "npm install"
+cwd = "./"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }

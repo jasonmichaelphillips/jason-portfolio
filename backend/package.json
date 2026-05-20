@@ -3,16 +3,22 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
+    "deploy": "wrangler publish",
+    "dev": "wrangler dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Finance data API - Cloudflare Worker + Node.js",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
   }
 }
