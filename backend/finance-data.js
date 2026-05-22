@@ -2,6 +2,8 @@
  * Shared finance payload builder for Cloudflare Worker and local Express server.
  */
 
+import { fetchYahooAnalysts } from './analyst-data.js';
+
 const UA = { 'User-Agent': 'Mozilla/5.0 (compatible; MSTR-Dashboard/1.0)' };
 
 function ma(arr, n) {
@@ -163,10 +165,14 @@ async function fetchStrategyTreasury() {
 }
 
 export async function buildFinancePayload() {
-  const [mstrResult, btcResult, treasury] = await Promise.all([
+  const [mstrResult, btcResult, treasury, analysts] = await Promise.all([
     fetchChart('MSTR', '2y'),
     fetchChart('BTC-USD', '2y'),
     fetchStrategyTreasury(),
+    fetchYahooAnalysts('MSTR').catch((err) => {
+      console.error('Analyst fetch failed:', err.message);
+      return null;
+    }),
   ]);
 
   const aligned = buildAlignedSeries(mstrResult, btcResult);
@@ -283,6 +289,7 @@ export async function buildFinancePayload() {
       marketCap,
       method: 'strategy',
     },
+    analysts,
     fetchedAt: new Date().toISOString(),
   };
 }

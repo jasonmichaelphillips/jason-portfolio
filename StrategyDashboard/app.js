@@ -67,6 +67,12 @@ function setBadgeChange(el, pct) {
   el.className = 'badge ' + (pct >= 0 ? 'badge-up' : 'badge-down');
 }
 
+function getAnalystTargets(data) {
+  if (data?.analysts?.targets?.length) return data.analysts.targets;
+  if (typeof TARGETS !== 'undefined' && TARGETS.length) return TARGETS;
+  return [];
+}
+
 function fmtMnavTag(r) {
   if (r > 1.4) return 'Premium re-expanding';
   if (r > 1.1) return 'Modest premium';
@@ -109,6 +115,7 @@ function ma(arr, n) {
   window.FINANCE_DATA = data;
   window.ALIGNED = data.aligned;
   window.LIVE_CURRENT = data.current;
+  window.ANALYST_TARGETS = getAnalystTargets(data);
 
   try {
     initDashboard(data);
@@ -148,12 +155,14 @@ function initDashboard(data) {
   setHtml('heroDrawdown', (dd >= 0 ? '+' : '−') + Math.abs(Math.round(dd)));
   setText('hero52wHigh', fmtMoney(meta.fiftyTwoWeekHigh, 2));
 
-  if (typeof TARGETS !== 'undefined' && TARGETS.length) {
-    const avg = TARGETS.reduce((s, t) => s + t.target, 0) / TARGETS.length;
+  const analystTargets = getAnalystTargets(data);
+  if (analystTargets.length) {
+    const c = data.analysts?.consensus;
+    const avg = c?.average ?? analystTargets.reduce((s, t) => s + t.target, 0) / analystTargets.length;
     const upside = ((avg - price) / price) * 100;
     setText('heroAnalystAvg', fmtMoney(avg, 0));
-    setText('heroAnalystNote', fmtPct(upside) + ' upside · ' + TARGETS.length + ' analysts');
-    updateAnalystConsensus(price);
+    setText('heroAnalystNote', fmtPct(upside) + ' upside · ' + analystTargets.length + ' analysts');
+    updateAnalystSection(price, data.analysts, analystTargets);
   }
 
   setText('btcHeldDisplay', company.btcHeld.toLocaleString('en-US'));
@@ -221,23 +230,53 @@ function initDashboard(data) {
   setupScenarios(price);
 }
 
-function updateAnalystConsensus(price) {
-  const sorted = [...TARGETS].sort((a, b) => a.target - b.target);
-  const targets = sorted.map((t) => t.target);
-  const avg = targets.reduce((a, b) => a + b, 0) / targets.length;
-  const median = targets[Math.floor(targets.length / 2)];
-  const high = sorted[sorted.length - 1];
-  const low = sorted[0];
+function updateAnalystSection(price, analysts, targets) {
+  const sorted = [...targets].sort((a, b) => a.target - b.target);
+  const c = analysts?.consensus;
+  const avg = c?.average ?? sorted.reduce((s, t) => s + t.target, 0) / sorted.length;
+  const med =
+    c?.median ??
+    (sorted.length % 2
+      ? sorted[Math.floor(sorted.length / 2)].target
+      : (sorted[sorted.length / 2 - 1].target + sorted[sorted.length / 2].target) / 2);
+  const high = c?.high ?? sorted[sorted.length - 1]?.target;
+  const low = c?.low ?? sorted[0]?.target;
+  const highFirm = c?.highFirm ?? sorted[sorted.length - 1]?.firm;
+  const lowFirm = c?.lowFirm ?? sorted[0]?.firm;
   const pct = (t) => fmtPct(((t - price) / price) * 100);
 
   setText('consAvg', fmtMoney(avg, 0));
   setText('consAvgPct', pct(avg));
-  setText('consMedian', fmtMoney(median, 0));
-  setText('consMedianPct', pct(median));
-  setText('consHigh', fmtMoney(high.target, 0));
-  setText('consHighFirm', high.firm);
-  setText('consLow', fmtMoney(low.target, 0));
-  setText('consLowFirm', low.firm);
+  setText('consMedian', fmtMoney(med, 0));
+  setText('consMedianPct', pct(med));
+  setText('consHigh', fmtMoney(high, 0));
+  setText('consHighFirm', highFirm || '—');
+  setText('consLow', fmtMoney(low, 0));
+  setText('consLowFirm', lowFirm || '—');
+
+  const sub = document.getElementById('analystSub');
+  if (sub) {
+    const parts = [];
+    if (c?.recommendation) parts.push(c.recommendation);
+    parts.push((c?.analystCount ?? targets.length) + ' analysts');
+    if (c?.bullishPct != null) parts.push(c.bullishPct + '% bullish');
+    const source = analysts?.source === 'yahoo' ? 'Yahoo Finance' : 'cached';
+    sub.innerHTML =
+      'Live targets via ' +
+      source +
+      (analysts?.fetchedAt
+        ? ' · ' +
+          new Date(analysts.fetchedAt).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          })
+        : '') +
+      '. Consensus: <strong>' +
+      parts.join(' · ') +
+      '</strong>';
+  }
 }
 
 function renderMetrics(data) {
@@ -330,7 +369,7 @@ function initCharts(data) {
   initDilutionChart(data);
   initTechChart(data.aligned, fibs);
   initScenChart();
-  initAnalystChart();
+  initAnalystChart(data);
 }
 
 function initRelChart(ALIGNED) {
@@ -738,10 +777,12 @@ function initScenChart() {
 }
 
 /* ============== ANALYSTS ============== */
-function initAnalystChart() {
-  if (typeof TARGETS === 'undefined') return;
-  const sorted = [...TARGETS].sort((a, b) => b.target - a.target);
-  const avgT = sorted.reduce((s, t) => s + t.target, 0) / sorted.length;
+function initAnalystChart(data) {
+  const targets = getAnalystTargets(data || window.FINANCE_DATA);
+  if (!targets.length) return;
+  const sorted = [...targets].sort((a, b) => b.target - a.target);
+  const c = data?.analysts?.consensus;
+  const avgT = c?.average ?? sorted.reduce((s, t) => s + t.target, 0) / sorted.length;
   const price = window.LIVE_CURRENT?.mstr ?? 0;
 
   const colors = sorted.map((t) =>
@@ -803,9 +844,15 @@ function initAnalystChart() {
           callbacks: {
             title: (items) => {
               const t = sorted[items[0].dataIndex];
-              return t.firm + ' · ' + t.analyst;
+              return t.firm + (t.date ? ' · ' + t.date : '');
             },
-            label: (c) => 'Target: $' + c.parsed.x,
+            label: (c) => {
+              const t = sorted[c.dataIndex];
+              const parts = ['Target: $' + c.parsed.x];
+              if (t.rating) parts.push(t.rating);
+              if (t.action) parts.push(t.action);
+              return parts;
+            },
           },
         },
       },

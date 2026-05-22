@@ -1,4 +1,4 @@
-/** Fallback analyst targets when live API is unavailable (update periodically). */
+/** Fallback analyst targets if Yahoo Finance fetch fails (normally unused). */
 const TARGETS = [
   { firm: 'Benchmark', analyst: 'Mark Palmer', target: 570, date: '2026-05-06' },
   { firm: 'TD Cowen', analyst: 'Lance Vitanza', target: 395, date: '2026-05-07' },
