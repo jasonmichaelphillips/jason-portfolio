@@ -109,8 +109,17 @@ function ma(arr, n) {
   window.FINANCE_DATA = data;
   window.ALIGNED = data.aligned;
   window.LIVE_CURRENT = data.current;
-  initDashboard(data);
-  initCharts(data);
+
+  try {
+    initDashboard(data);
+  } catch (err) {
+    console.error('Dashboard init failed:', err);
+  }
+  try {
+    initCharts(data);
+  } catch (err) {
+    console.error('Charts init failed:', err);
+  }
 })();
 
 /* ============== DOM UPDATES ============== */
@@ -606,7 +615,9 @@ function setupMnavCalculator() {
     }
   };
 
-  Object.values(mnavInputs).forEach((el) => el.addEventListener('input', window.recomputeMnav));
+  Object.values(mnavInputs).forEach((el) => {
+    if (el) el.addEventListener('input', window.recomputeMnav);
+  });
   window.recomputeMnav();
 }
 
@@ -645,7 +656,7 @@ function setupScenarios(initialPrice) {
 
     setText('scenBtcVal', fmtMoney(btcP, 0));
     setText('scenMnavVal', mnav.toFixed(2) + 'x');
-    setText('scenBtcVal2', fmtBn(btcVal));
+    setText('scenBtcVal2', fmtBn(btcReserve));
     setText('scenNavPS', fmtMoney(navPS, 0));
     setText('scenTarget', fmtMoney(target, 0));
     const tag = document.getElementById('scenReturn');
@@ -654,12 +665,13 @@ function setupScenarios(initialPrice) {
     paintSliders();
   };
 
-  [scenBtc, scenMnav].forEach((el) =>
+  [scenBtc, scenMnav].forEach((el) => {
+    if (!el) return;
     el.addEventListener('input', () => {
       document.querySelectorAll('input[name="preset"]').forEach((r) => (r.checked = false));
       window.recomputeScen();
-    })
-  );
+    });
+  });
   document.querySelectorAll('input[name="preset"]').forEach((r) => {
     r.addEventListener('change', (e) => {
       const p = SCEN_PRESETS[e.target.value];
