@@ -1,69 +1,4 @@
-/* MSTR dashboard interactions */
-
-// Initialize with live data from backend
-(async function() {
-  try {
-    // Determine API endpoint: use localhost for local development, otherwise use current domain
-    let apiUrl = 'http://localhost:3000/api/finance';
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== 'file:') {
-      // We're on a deployed domain - use the same domain for the API
-      apiUrl = `${window.location.protocol}//${window.location.hostname}/api/finance`;
-    }
-    
-    const res = await fetch(apiUrl);
-    const liveData = await res.json();
-    if (liveData.aligned && liveData.aligned.length > 0) {
-      window.ALIGNED = liveData.aligned;
-      window.LIVE_CURRENT = liveData.current;
-    }
-  } catch(e) {
-    console.log("Failed to fetch live data, using static data:", e);
-  }
-  initDashboard();
-})();
-
-function initDashboard() {
-  if (!window.ALIGNED) window.ALIGNED = ALIGNED;
-  const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
-  const CURR_BTC = window.LIVE_CURRENT ? window.LIVE_CURRENT.btc : 80400;
-  
-  // Update hero section
-  if (window.LIVE_CURRENT) {
-    document.getElementById('heroMstrPrice').textContent = '$' + CURR_PRICE.toLocaleString('en-US', {maximumFractionDigits: 2});
-    document.getElementById('heroDate').textContent = 'Medium-term investment dashboard — ' + new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
-  }
-  
-  // Update slider values to live data
-  const btcPriceSlider = document.getElementById('btcPrice');
-  const mstrPriceSlider = document.getElementById('mstrPrice');
-  if (btcPriceSlider) btcPriceSlider.value = CURR_BTC;
-  if (mstrPriceSlider) mstrPriceSlider.value = CURR_PRICE;
-  
-  // Update BTC info
-  const btcN = 818334;
-  const debt = 8.17e9;
-  const btcValue = CURR_BTC * btcN;
-  const navNet = btcValue - debt;
-  document.getElementById('btcFairValueLabel').textContent = 'Fair value @ $' + CURR_BTC.toLocaleString('en-US', {maximumFractionDigits: 0});
-  document.getElementById('btcFairValue').textContent = '$' + (btcValue / 1e9).toFixed(2) + 'B';
-  document.getElementById('btcNetDebt').textContent = '$' + (navNet / 1e9).toFixed(2) + 'B';
-  
-  // Update date references
-  document.querySelectorAll('#metricsDate').forEach(el => {
-    el.textContent = new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
-  });
-  document.getElementById('footerDate').textContent = new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
-  document.querySelectorAll('.dynPrice').forEach(el => {
-    el.textContent = '$' + CURR_PRICE.toLocaleString('en-US', {maximumFractionDigits: 2});
-  });
-  
-  // Re-trigger scenario computation with live price
-  if (typeof recomputeScen === 'function') recomputeScen();
-  if (typeof recomputeMnav === 'function') recomputeMnav();
-
-  // Render dynamic metrics grid with live prices
-  renderMetrics(CURR_PRICE, CURR_BTC);
-}
+/* MSTR dashboard — loads live data before rendering charts */
 
 const COLORS = {
   gold: '#F7931A',
@@ -75,7 +10,7 @@ const COLORS = {
   green: '#28d07a',
   red: '#ff5a6e',
   gridDim: 'rgba(255,255,255,0.06)',
-  gridText: 'rgba(255,255,255,0.55)'
+  gridText: 'rgba(255,255,255,0.55)',
 };
 
 Chart.defaults.color = COLORS.gridText;
@@ -83,131 +18,51 @@ Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 Chart.defaults.font.size = 12;
 Chart.defaults.borderColor = COLORS.gridDim;
 
-const fmtMoney = (n,d=2) => '$'+n.toLocaleString('en-US',{maximumFractionDigits:d});
-const fmtBn = (n) => '$'+(n/1e9).toFixed(2)+'B';
-const fmtCompact = (n) => {
-  const a = Math.abs(n);
-  if (a >= 1e9) return '$'+(n/1e9).toFixed(2)+'B';
-  if (a >= 1e6) return '$'+(n/1e6).toFixed(1)+'M';
-  if (a >= 1e3) return '$'+(n/1e3).toFixed(1)+'K';
-  return '$'+n.toFixed(0);
+const fmtMoney = (n, d = 2) => '$' + n.toLocaleString('en-US', { maximumFractionDigits: d });
+const fmtBn = (n) => '$' + (n / 1e9).toFixed(2) + 'B';
+const fmtPct = (n, signed = true) => {
+  const s = signed && n >= 0 ? '+' : '';
+  return s + n.toFixed(1) + '%';
 };
 
-/* ============== METRICS GRID (dynamic with live data) ============== */
-function renderMetrics(price, btc) {
-  const grid = document.getElementById('metrics-grid');
-  if (!grid) return;
-  grid.innerHTML = ''; // clear previous
+function getApiUrl() {
+  if (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:'
+  ) {
+    return 'http://localhost:3000/api/finance';
+  }
+  return `${window.location.protocol}//${window.location.hostname}/api/finance`;
+}
 
-  const dilutedShares = 333.9e6;
-  const basicShares = 297.4e6; // approx
-  const btcHeld = 818334;
-  const debt = 8.17e9;
-  const cash = 2.21e9;
-  const assets = 54.27e9;
-
-  const mktCapDil = price * dilutedShares;
-  const mktCapBasic = price * basicShares;
-  const btcFair = btc * btcHeld;
-
-  const metrics = [
-    {label:'Price',          value:'$'+price.toLocaleString('en-US',{maximumFractionDigits:2}), sub:'Live from Yahoo Finance'},
-    {label:'Market cap (diluted)', value:fmtBn(mktCapDil), sub:'333.9M diluted shares'},
-    {label:'Reported market cap', value:fmtBn(mktCapBasic), sub:'~297M basic shares'},
-    {label:'52-week range',  value:'$104.17 – $457.22', sub:'Drawdown −59% from high'},
-    {label:'Volume',         value:'15.7M', sub:'avg 19.8M'},
-    {label:'TTM EPS',        value:'−$36.99', sub:'BTC mark-to-market'},
-    {label:'BTC reference',  value:'$'+btc.toLocaleString('en-US',{maximumFractionDigits:0}), sub:'Live price'},
-    {label:'BTC held',       value:btcHeld.toLocaleString('en-US'), sub:fmtBn(btcFair)+' fair value'},
-    {label:'Long-term debt', value:'$8.17B',  sub:'convertible notes'},
-    {label:'Cash',           value:'$2.21B',  sub:'Q1 2026'},
-    {label:'Total assets',   value:'$54.27B', sub:'Q1 2026'},
-    {label:'Annualized vol', value:'69%',     sub:'beta 1.30 vs BTC'}
-  ];
-
-  metrics.forEach(m => {
-    const el = document.createElement('div');
-    el.className = 'metric';
-    el.innerHTML = `<div class="metric-label">${m.label}</div>
-                    <div class="metric-value">${m.value}</div>
-                    <div class="metric-sub">${m.sub}</div>`;
-    grid.appendChild(el);
+function paintSliders() {
+  document.querySelectorAll('input[type="range"]').forEach((s) => {
+    const min = +s.min;
+    const max = +s.max;
+    const val = +s.value;
+    const pct = ((val - min) / (max - min)) * 100;
+    s.style.setProperty('--p', pct + '%');
   });
 }
 
-/* update slider fill */
-function paintSliders(){
-  document.querySelectorAll('input[type="range"]').forEach(s=>{
-    const min=+s.min, max=+s.max, val=+s.value;
-    const pct = ((val-min)/(max-min))*100;
-    s.style.setProperty('--p', pct+'%');
-  });
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
 }
 
-/* ============== REL CHART (MSTR vs BTC normalized) ============== */
-{
-  const baseM = ALIGNED[0].mstr;
-  const baseB = ALIGNED[0].btc;
-  const labels = ALIGNED.map(d=>d.date);
-  const mstrIdx = ALIGNED.map(d => (d.mstr/baseM)*100);
-  const btcIdx = ALIGNED.map(d => (d.btc/baseB)*100);
-  const ctx = document.getElementById('relChart');
-  new Chart(ctx,{
-    type:'line',
-    data:{
-      labels,
-      datasets:[
-        {label:'MSTR (rebased)', data:mstrIdx, borderColor:COLORS.gold, backgroundColor:'rgba(247,147,26,0.06)', borderWidth:2, pointRadius:0, tension:0.15, fill:true},
-        {label:'BTC (rebased)',  data:btcIdx,  borderColor:COLORS.white, backgroundColor:'rgba(255,255,255,0.02)', borderWidth:1.6, pointRadius:0, tension:0.15, borderDash:[]},
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      interaction:{mode:'index', intersect:false},
-      plugins:{
-        legend:{position:'top', align:'end', labels:{color:COLORS.white, usePointStyle:true, boxWidth:8}},
-        tooltip:{backgroundColor:'rgba(10,16,32,0.95)', borderColor:COLORS.gold, borderWidth:1,
-          callbacks:{ label:(c)=> `${c.dataset.label}: ${c.parsed.y.toFixed(1)}` }}
-      },
-      scales:{
-        x:{type:'time', time:{unit:'month', displayFormats:{month:'MMM yy'}}, grid:{color:COLORS.gridDim}, ticks:{maxTicksLimit:10}},
-        y:{grid:{color:COLORS.gridDim}, ticks:{callback:v=>v}}
-      }
-    }
-  });
+function setHtml(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
 }
 
-/* ============== DILUTION CHART ============== */
-{
-  const ctx = document.getElementById('dilutionChart');
-  new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels: SHARES.map(s=>s.q),
-      datasets:[{
-        label:'Diluted shares (M)',
-        data: SHARES.map(s=>s.shares),
-        backgroundColor: SHARES.map((_,i)=> i===0||i===SHARES.length-1 ? COLORS.gold : 'rgba(247,147,26,0.45)'),
-        borderRadius:8, borderSkipped:false,
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{backgroundColor:'rgba(10,16,32,0.95)', borderColor:COLORS.gold, borderWidth:1,
-          callbacks:{label:c=>`${c.parsed.y.toFixed(1)}M shares`}}
-      },
-      scales:{
-        x:{grid:{display:false}},
-        y:{grid:{color:COLORS.gridDim}, ticks:{callback:v=>v+'M'}, beginAtZero:false, suggestedMin:200}
-      }
-    }
-  });
+function setBadgeChange(el, pct) {
+  if (!el) return;
+  el.textContent = fmtPct(pct);
+  el.className = 'badge ' + (pct >= 0 ? 'badge-up' : 'badge-down');
 }
 
-/* ============== mNAV CALCULATOR ============== */
-function fmtMnavTag(r){
+function fmtMnavTag(r) {
   if (r > 1.4) return 'Premium re-expanding';
   if (r > 1.1) return 'Modest premium';
   if (r > 0.95) return 'Near 1× — slight premium';
@@ -215,111 +70,360 @@ function fmtMnavTag(r){
   return 'Deep discount to NAV';
 }
 
-const mnavInputs = {
-  btcPrice: document.getElementById('btcPrice'),
-  btcHeld: document.getElementById('btcHeld'),
-  ltDebt: document.getElementById('ltDebt'),
-  dilShares: document.getElementById('dilShares'),
-  mstrPrice: document.getElementById('mstrPrice')
-};
-
-let mnavBarChart;
-function recomputeMnav(){
-  const btcP = +mnavInputs.btcPrice.value;
-  const btcN = +mnavInputs.btcHeld.value;
-  const debt = +mnavInputs.ltDebt.value * 1e9;
-  const sh   = +mnavInputs.dilShares.value * 1e6;
-  const px   = +mnavInputs.mstrPrice.value;
-
-  const btcValue = btcP * btcN;          // gross BTC value
-  const navNet   = btcValue - debt;      // simplified — exclude software & cash
-  const navPS    = navNet / sh;
-  const mktCap   = px * sh;
-  const mnavR    = mktCap / navNet;
-
-  document.getElementById('btcPriceVal').textContent = fmtMoney(btcP,0);
-  document.getElementById('btcHeldVal').textContent  = btcN.toLocaleString();
-  document.getElementById('ltDebtVal').textContent   = '$'+(+mnavInputs.ltDebt.value).toFixed(2)+'B';
-  document.getElementById('dilSharesVal').textContent= (+mnavInputs.dilShares.value).toFixed(1);
-  document.getElementById('mstrPriceVal').textContent= fmtMoney(px,2);
-
-  document.getElementById('outBtcValue').textContent = fmtBn(btcValue);
-  document.getElementById('outNav').textContent       = fmtBn(navNet);
-  document.getElementById('outNavPerShare').textContent = fmtMoney(navPS,2);
-  document.getElementById('outMnav').innerHTML = mnavR.toFixed(3)+'<span class="ot-suffix">x</span>';
-  document.getElementById('outMnavTag').textContent = fmtMnavTag(mnavR);
-
-  paintSliders();
-
-  // bar chart: market cap vs NAV (in $B)
-  const data = {
-    labels:['Market cap','NAV (BTC − debt)'],
-    datasets:[{
-      label:'Value',
-      data:[mktCap/1e9, navNet/1e9],
-      backgroundColor:[COLORS.gold, 'rgba(94,160,255,0.7)'],
-      borderRadius:8, borderSkipped:false,
-    }]
-  };
-  if (!mnavBarChart){
-    mnavBarChart = new Chart(document.getElementById('mnavBar'),{
-      type:'bar',
-      data,
-      options:{
-        indexAxis:'y',
-        responsive:true, maintainAspectRatio:false,
-        plugins:{
-          legend:{display:false},
-          tooltip:{callbacks:{label:c=>'$'+c.parsed.x.toFixed(2)+'B'}}
-        },
-        scales:{
-          x:{grid:{color:COLORS.gridDim}, ticks:{callback:v=>'$'+v+'B'}},
-          y:{grid:{display:false}}
-        }
-      }
-    });
-  } else {
-    mnavBarChart.data.datasets[0].data = [mktCap/1e9, navNet/1e9];
-    mnavBarChart.update('none');
+function ma(arr, n) {
+  const out = [];
+  let sum = 0;
+  for (let i = 0; i < arr.length; i++) {
+    sum += arr[i];
+    if (i >= n) sum -= arr[i - n];
+    out.push(i >= n - 1 ? sum / n : null);
   }
+  return out;
 }
-Object.values(mnavInputs).forEach(el => el.addEventListener('input', recomputeMnav));
-recomputeMnav();
 
-/* ============== TECHNICALS CHART ============== */
-{
-  // build MA50 / MA200 from MSTR series
-  const closes = ALIGNED.map(d => d.mstr);
-  const dates = ALIGNED.map(d => d.date);
-  function ma(arr, n){
-    const out=[]; let sum=0;
-    for (let i=0;i<arr.length;i++){
-      sum += arr[i];
-      if (i>=n) sum -= arr[i-n];
-      out.push(i>=n-1 ? sum/n : null);
-    }
-    return out;
+/* ============== BOOT ============== */
+(async function boot() {
+  let data = null;
+  try {
+    const res = await fetch(getApiUrl());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    data = await res.json();
+    if (!data.aligned?.length) throw new Error('Empty series');
+  } catch (e) {
+    console.warn('Live API unavailable:', e);
   }
-  const ma50 = ma(closes,50);
-  const ma200 = ma(closes,200);
 
-  // Fib lines plugin
-  const fibs = [
-    {label:'23.6%', value:387, color:'rgba(40,208,122,0.7)'},
-    {label:'38.2%', value:334, color:'rgba(94,160,255,0.7)'},
-    {label:'50.0%', value:290, color:'rgba(255,255,255,0.45)'},
-    {label:'61.8%', value:247, color:'rgba(247,147,26,0.85)'},
-    {label:'78.6%', value:185, color:'rgba(255,90,110,0.95)'},
+  if (!data) {
+    document.body.insertAdjacentHTML(
+      'afterbegin',
+      '<div style="background:#ff5a6e;color:#fff;padding:12px;text-align:center">Unable to load market data. Start the API: <code>cd backend && npm start</code></div>'
+    );
+    return;
+  }
+
+  window.FINANCE_DATA = data;
+  window.ALIGNED = data.aligned;
+  window.LIVE_CURRENT = data.current;
+  initDashboard(data);
+  initCharts(data);
+})();
+
+/* ============== DOM UPDATES ============== */
+function initDashboard(data) {
+  const { current, meta, company, technicals, mnav } = data;
+  const price = current.mstr;
+  const btc = current.btc;
+  const shares = company.shares;
+  const debtB = company.debt / 1e9;
+
+  setText('heroMstrPrice', fmtMoney(price));
+  setBadgeChange(document.getElementById('heroMstrChange'), current.mstrChangePct);
+  setText(
+    'heroDate',
+    'Medium-term investment dashboard — ' +
+      new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  );
+  setText('heroBtcHeld', company.btcHeld.toLocaleString('en-US') + ' BTC');
+
+  if (mnav.ratio != null) {
+    setText('heroMnavRatio', mnav.ratio.toFixed(2));
+    setText('heroMnavNote', fmtMnavTag(mnav.ratio));
+  }
+
+  const dd = technicals.drawdownPct;
+  setHtml('heroDrawdown', (dd >= 0 ? '+' : '−') + Math.abs(Math.round(dd)));
+  setText('hero52wHigh', fmtMoney(meta.fiftyTwoWeekHigh, 2));
+
+  if (typeof TARGETS !== 'undefined' && TARGETS.length) {
+    const avg = TARGETS.reduce((s, t) => s + t.target, 0) / TARGETS.length;
+    const upside = ((avg - price) / price) * 100;
+    setText('heroAnalystAvg', fmtMoney(avg, 0));
+    setText('heroAnalystNote', fmtPct(upside) + ' upside · ' + TARGETS.length + ' analysts');
+    updateAnalystConsensus(price);
+  }
+
+  setText('btcHeldDisplay', company.btcHeld.toLocaleString('en-US'));
+  setText('btcFairValueLabel', 'Fair value @ ' + fmtMoney(btc, 0));
+  setText('btcFairValue', fmtBn(mnav.btcFairValue));
+  setText('btcNetDebt', fmtBn(mnav.navNet));
+  setText('btcYtdGrowth', company.btcYieldYtd != null ? '+' + company.btcYieldYtd + '%' : '—');
+  setText('btcAsOf', company.asOfDate || current.date);
+
+  document.querySelectorAll('#metricsDate').forEach((el) => {
+    el.textContent = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  });
+  setText('footerDate', new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+  document.querySelectorAll('.dynPrice').forEach((el) => {
+    el.textContent = fmtMoney(price);
+  });
+
+  setText('lvl52High', fmtMoney(meta.fiftyTwoWeekHigh));
+  setText('lvl52Low', fmtMoney(meta.fiftyTwoWeekLow));
+  setText('lvlMa20', technicals.ma20 != null ? fmtMoney(technicals.ma20) : '—');
+  setText('lvlMa50', technicals.ma50 != null ? fmtMoney(technicals.ma50) : '—');
+  setText('lvlMa200', technicals.ma200 != null ? fmtMoney(technicals.ma200) : '—');
+  setText('lvlRsi', technicals.rsi14 != null ? String(technicals.rsi14) : '—');
+  setText('lvlBeta', technicals.betaVsBtc != null ? String(technicals.betaVsBtc) : '—');
+  setText('lvlVol', technicals.annualizedVol != null ? technicals.annualizedVol + '%' : '—');
+
+  const btcSlider = document.getElementById('btcPrice');
+  const mstrSlider = document.getElementById('mstrPrice');
+  const heldSlider = document.getElementById('btcHeld');
+  const debtSlider = document.getElementById('ltDebt');
+  const sharesSlider = document.getElementById('dilShares');
+  if (btcSlider) btcSlider.value = Math.round(btc);
+  if (mstrSlider) mstrSlider.value = price;
+  if (heldSlider) heldSlider.value = company.btcHeld;
+  if (debtSlider) debtSlider.value = debtB;
+  if (sharesSlider) sharesSlider.value = (shares / 1e6).toFixed(1);
+
+  window.FWD_BTC = company.btcHeld;
+  window.FWD_DEBT = company.debt;
+  window.FWD_SHARES = shares;
+
+  if (data.fetchedAt) {
+    const fresh = new Date(data.fetchedAt);
+    setText(
+      'dataFreshness',
+      'Updated ' +
+        fresh.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        })
+    );
+  }
+
+  renderMetrics(data);
+  setupMnavCalculator();
+  setupScenarios(price);
+}
+
+function updateAnalystConsensus(price) {
+  const sorted = [...TARGETS].sort((a, b) => a.target - b.target);
+  const targets = sorted.map((t) => t.target);
+  const avg = targets.reduce((a, b) => a + b, 0) / targets.length;
+  const median = targets[Math.floor(targets.length / 2)];
+  const high = sorted[sorted.length - 1];
+  const low = sorted[0];
+  const pct = (t) => fmtPct(((t - price) / price) * 100);
+
+  setText('consAvg', fmtMoney(avg, 0));
+  setText('consAvgPct', pct(avg));
+  setText('consMedian', fmtMoney(median, 0));
+  setText('consMedianPct', pct(median));
+  setText('consHigh', fmtMoney(high.target, 0));
+  setText('consHighFirm', high.firm);
+  setText('consLow', fmtMoney(low.target, 0));
+  setText('consLowFirm', low.firm);
+}
+
+function renderMetrics(data) {
+  const grid = document.getElementById('metrics-grid');
+  if (!grid) return;
+  const { current, meta, company, technicals, mnav } = data;
+  const price = current.mstr;
+  const btc = current.btc;
+  const shares = company.shares;
+  const mktCap = mnav.marketCap ?? price * shares;
+
+  const metrics = [
+    { label: 'Price', value: fmtMoney(price), sub: 'Live · Yahoo Finance' },
+    { label: 'Day change', value: fmtPct(current.mstrChangePct), sub: 'vs prior close' },
+    { label: 'Market cap', value: fmtBn(mktCap), sub: (shares / 1e6).toFixed(1) + 'M shares' },
+    {
+      label: '52-week range',
+      value: fmtMoney(meta.fiftyTwoWeekLow, 0) + ' – ' + fmtMoney(meta.fiftyTwoWeekHigh, 0),
+      sub: 'Drawdown ' + Math.round(technicals.drawdownPct) + '% from high',
+    },
+    {
+      label: 'Volume',
+      value: meta.volume != null ? (meta.volume / 1e6).toFixed(1) + 'M' : '—',
+      sub: meta.averageVolume != null ? 'avg ' + (meta.averageVolume / 1e6).toFixed(1) + 'M' : '—',
+    },
+    { label: 'BTC reference', value: fmtMoney(btc, 0), sub: 'Live price' },
+    {
+      label: 'BTC held',
+      value: company.btcHeld.toLocaleString('en-US'),
+      sub: fmtBn(mnav.btcFairValue) + ' fair value',
+    },
+    { label: 'Long-term debt', value: fmtBn(company.debt), sub: 'Strategy disclosure' },
+    { label: 'Cash', value: fmtBn(company.cash), sub: company.asOfDate ? 'as of ' + company.asOfDate : '' },
+    { label: 'mNAV ratio', value: mnav.ratio != null ? mnav.ratio.toFixed(2) + '×' : '—', sub: 'Market cap / NAV' },
+    {
+      label: 'NAV / share',
+      value: mnav.navPerShare != null ? fmtMoney(mnav.navPerShare) : '—',
+      sub: 'BTC − debt, per share',
+    },
+    {
+      label: 'Annualized vol',
+      value: technicals.annualizedVol != null ? technicals.annualizedVol + '%' : '—',
+      sub:
+        technicals.betaVsBtc != null ? 'beta ' + technicals.betaVsBtc + ' vs BTC' : '252 trading days',
+    },
   ];
+
+  grid.innerHTML = '';
+  metrics.forEach((m) => {
+    const el = document.createElement('div');
+    el.className = 'metric';
+    el.innerHTML =
+      '<div class="metric-label">' +
+      m.label +
+      '</div><div class="metric-value">' +
+      m.value +
+      '</div><div class="metric-sub">' +
+      m.sub +
+      '</div>';
+    grid.appendChild(el);
+  });
+}
+
+/* ============== CHARTS (after live data) ============== */
+function initCharts(data) {
+  const series = data.aligned18m?.length ? data.aligned18m : data.aligned;
+  const fibs = (data.technicals.fibs || []).map((f) => ({
+    label: f.label,
+    value: f.value,
+    color:
+      f.pct >= 0.786
+        ? 'rgba(255,90,110,0.95)'
+        : f.pct >= 0.618
+          ? 'rgba(247,147,26,0.85)'
+          : f.pct >= 0.5
+            ? 'rgba(255,255,255,0.45)'
+            : f.pct >= 0.382
+              ? 'rgba(94,160,255,0.7)'
+              : 'rgba(40,208,122,0.7)',
+  }));
+
+  if (series.length && document.getElementById('relChartSub')) {
+    const start = series[0].date;
+    document.getElementById('relChartSub').textContent =
+      'Both rebased to 100 at ' +
+      new Date(start + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  initRelChart(series);
+  initDilutionChart(data);
+  initTechChart(data.aligned, fibs);
+  initScenChart();
+  initAnalystChart();
+}
+
+function initRelChart(ALIGNED) {
+  const baseM = ALIGNED[0].mstr;
+  const baseB = ALIGNED[0].btc;
+  const labels = ALIGNED.map((d) => d.date);
+  const mstrIdx = ALIGNED.map((d) => (d.mstr / baseM) * 100);
+  const btcIdx = ALIGNED.map((d) => (d.btc / baseB) * 100);
+  const ctx = document.getElementById('relChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'MSTR (rebased)',
+          data: mstrIdx,
+          borderColor: COLORS.gold,
+          backgroundColor: 'rgba(247,147,26,0.06)',
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.15,
+          fill: true,
+        },
+        {
+          label: 'BTC (rebased)',
+          data: btcIdx,
+          borderColor: COLORS.white,
+          backgroundColor: 'rgba(255,255,255,0.02)',
+          borderWidth: 1.6,
+          pointRadius: 0,
+          tension: 0.15,
+        },
+      ],
+    },
+    options: chartLineOptions(),
+  });
+}
+
+function initDilutionChart(data) {
+  const history = data.company.treasuryHistory || [];
+  let labels;
+  let values;
+  if (history.length >= 2) {
+    labels = history.map((h) => h.date);
+    values = history.map((h) => h.basicSharesM);
+  } else if (typeof SHARES !== 'undefined') {
+    labels = SHARES.map((s) => s.q);
+    values = SHARES.map((s) => s.shares);
+  } else {
+    return;
+  }
+  const ctx = document.getElementById('dilutionChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Shares (M)',
+          data: values,
+          backgroundColor: values.map((_, i) =>
+            i === 0 || i === values.length - 1 ? COLORS.gold : 'rgba(247,147,26,0.45)'
+          ),
+          borderRadius: 8,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(10,16,32,0.95)',
+          borderColor: COLORS.gold,
+          borderWidth: 1,
+          callbacks: { label: (c) => c.parsed.y.toFixed(1) + 'M shares' },
+        },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          grid: { color: COLORS.gridDim },
+          ticks: { callback: (v) => v + 'M' },
+          beginAtZero: false,
+        },
+      },
+    },
+  });
+}
+
+function initTechChart(ALIGNED, fibs) {
+  const closes = ALIGNED.map((d) => d.mstr);
+  const dates = ALIGNED.map((d) => d.date);
+  const ma50 = ma(closes, 50);
+  const ma200 = ma(closes, 200);
+
   const fibPlugin = {
-    id:'fibLines',
-    afterDatasetsDraw(chart){
-      const {ctx, chartArea, scales:{y}} = chart;
+    id: 'fibLines',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea, scales: { y } } = chart;
       ctx.save();
-      ctx.setLineDash([6,5]);
+      ctx.setLineDash([6, 5]);
       ctx.lineWidth = 1;
       ctx.font = "11px 'JetBrains Mono', monospace";
-      fibs.forEach(f => {
+      fibs.forEach((f) => {
         const yp = y.getPixelForValue(f.value);
         if (yp < chartArea.top || yp > chartArea.bottom) return;
         ctx.strokeStyle = f.color;
@@ -328,198 +432,363 @@ recomputeMnav();
         ctx.lineTo(chartArea.right, yp);
         ctx.stroke();
         ctx.fillStyle = f.color;
-        ctx.fillText(`${f.label}  $${f.value}`, chartArea.left+8, yp-4);
+        ctx.fillText(`${f.label}  $${f.value}`, chartArea.left + 8, yp - 4);
       });
       ctx.restore();
+    },
+  };
+
+  const ctx = document.getElementById('techChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        {
+          label: 'MSTR close',
+          data: closes,
+          borderColor: COLORS.gold,
+          backgroundColor: 'rgba(247,147,26,0.05)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.1,
+        },
+        {
+          label: 'MA50',
+          data: ma50,
+          borderColor: 'rgba(94,160,255,0.85)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.1,
+        },
+        {
+          label: 'MA200',
+          data: ma200,
+          borderColor: 'rgba(255,255,255,0.7)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          borderDash: [2, 3],
+        },
+      ],
+    },
+    options: {
+      ...chartLineOptions(),
+      plugins: {
+        ...chartLineOptions().plugins,
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { color: COLORS.white, usePointStyle: true, boxWidth: 8 },
+        },
+      },
+    },
+    plugins: [fibPlugin],
+  });
+}
+
+function chartLineOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'top',
+        align: 'end',
+        labels: { color: COLORS.white, usePointStyle: true, boxWidth: 8 },
+      },
+      tooltip: {
+        backgroundColor: 'rgba(10,16,32,0.95)',
+        borderColor: COLORS.gold,
+        borderWidth: 1,
+        callbacks: {
+          label: (c) =>
+            c.parsed.y != null ? `${c.dataset.label}: ${c.parsed.y.toFixed(1)}` : null,
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: 'time',
+        time: { unit: 'month', displayFormats: { month: 'MMM yy' } },
+        grid: { color: COLORS.gridDim },
+        ticks: { maxTicksLimit: 10 },
+      },
+      y: { grid: { color: COLORS.gridDim } },
+    },
+  };
+}
+
+/* ============== mNAV CALCULATOR ============== */
+let mnavBarChart;
+
+function setupMnavCalculator() {
+  const mnavInputs = {
+    btcPrice: document.getElementById('btcPrice'),
+    btcHeld: document.getElementById('btcHeld'),
+    ltDebt: document.getElementById('ltDebt'),
+    dilShares: document.getElementById('dilShares'),
+    mstrPrice: document.getElementById('mstrPrice'),
+  };
+
+  window.recomputeMnav = function recomputeMnav() {
+    const btcP = +mnavInputs.btcPrice.value;
+    const btcN = +mnavInputs.btcHeld.value;
+    const debt = +mnavInputs.ltDebt.value * 1e9;
+    const sh = +mnavInputs.dilShares.value * 1e6;
+    const px = +mnavInputs.mstrPrice.value;
+
+    const btcValue = btcP * btcN;
+    const navNet = btcValue - debt;
+    const navPS = navNet / sh;
+    const mktCap = px * sh;
+    const mnavR = mktCap / navNet;
+
+    setText('btcPriceVal', fmtMoney(btcP, 0));
+    setText('btcHeldVal', btcN.toLocaleString());
+    setText('ltDebtVal', '$' + (+mnavInputs.ltDebt.value).toFixed(2) + 'B');
+    setText('dilSharesVal', (+mnavInputs.dilShares.value).toFixed(1));
+    setText('mstrPriceVal', fmtMoney(px, 2));
+    setText('outBtcValue', fmtBn(btcValue));
+    setText('outNav', fmtBn(navNet));
+    setText('outNavPerShare', fmtMoney(navPS, 2));
+    setHtml('outMnav', mnavR.toFixed(3) + '<span class="ot-suffix">x</span>');
+    setText('outMnavTag', fmtMnavTag(mnavR));
+
+    paintSliders();
+
+    const barData = {
+      labels: ['Market cap', 'NAV (BTC − debt)'],
+      datasets: [
+        {
+          label: 'Value',
+          data: [mktCap / 1e9, navNet / 1e9],
+          backgroundColor: [COLORS.gold, 'rgba(94,160,255,0.7)'],
+          borderRadius: 8,
+          borderSkipped: false,
+        },
+      ],
+    };
+    if (!mnavBarChart) {
+      mnavBarChart = new Chart(document.getElementById('mnavBar'), {
+        type: 'bar',
+        data: barData,
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => '$' + c.parsed.x.toFixed(2) + 'B' } },
+          },
+          scales: {
+            x: { grid: { color: COLORS.gridDim }, ticks: { callback: (v) => '$' + v + 'B' } },
+            y: { grid: { display: false } },
+          },
+        },
+      });
+    } else {
+      mnavBarChart.data.datasets[0].data = [mktCap / 1e9, navNet / 1e9];
+      mnavBarChart.update('none');
     }
   };
 
-  new Chart(document.getElementById('techChart'),{
-    type:'line',
-    data:{
-      labels:dates,
-      datasets:[
-        {label:'MSTR close', data:closes, borderColor:COLORS.gold, backgroundColor:'rgba(247,147,26,0.05)', borderWidth:2, pointRadius:0, fill:true, tension:0.1},
-        {label:'MA50',       data:ma50,   borderColor:'rgba(94,160,255,0.85)', borderWidth:1.5, pointRadius:0, tension:0.1, fill:false},
-        {label:'MA200',      data:ma200,  borderColor:'rgba(255,255,255,0.7)', borderWidth:1.5, pointRadius:0, tension:0.1, borderDash:[2,3], fill:false},
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      interaction:{mode:'index', intersect:false},
-      plugins:{
-        legend:{position:'top', align:'end', labels:{color:COLORS.white, usePointStyle:true, boxWidth:8}},
-        tooltip:{backgroundColor:'rgba(10,16,32,0.95)', borderColor:COLORS.gold, borderWidth:1,
-          callbacks:{label:c=> c.parsed.y!=null ? `${c.dataset.label}: $${c.parsed.y.toFixed(2)}` : null}}
-      },
-      scales:{
-        x:{type:'time', time:{unit:'month', displayFormats:{month:'MMM yy'}}, grid:{color:COLORS.gridDim}, ticks:{maxTicksLimit:10}},
-        y:{grid:{color:COLORS.gridDim}, ticks:{callback:v=>'$'+v}}
-      }
-    },
-    plugins:[fibPlugin]
-  });
+  Object.values(mnavInputs).forEach((el) => el.addEventListener('input', window.recomputeMnav));
+  window.recomputeMnav();
 }
 
 /* ============== SCENARIOS ============== */
 const SCEN_PRESETS = {
-  bear:{btc:60000,  mnav:0.9, label:'Bear'},
-  base:{btc:100000, mnav:1.2, label:'Base'},
-  bull:{btc:150000, mnav:1.5, label:'Bull'},
-  sky: {btc:200000, mnav:1.8, label:'Blue Sky'}
+  bear: { btc: 60000, mnav: 0.9 },
+  base: { btc: 100000, mnav: 1.2 },
+  bull: { btc: 150000, mnav: 1.5 },
+  sky: { btc: 200000, mnav: 1.8 },
 };
-const SCEN_PRESET_TARGETS = { bear:103, base:245, bull:477, sky:777 };
-const FWD_SHARES = 360e6;
-const FWD_DEBT = 8.2e9;
-const FWD_BTC = 818334;
-// CURR_PRICE now comes from window.LIVE_CURRENT set in initDashboard
 
-const scenBtc = document.getElementById('scenBtc');
-const scenMnav = document.getElementById('scenMnav');
 let scenChart;
 
-function recomputeScen(){
-  const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
-  const btcP = +scenBtc.value;
-  const mnav = +scenMnav.value;
-  const btcVal = btcP * FWD_BTC;
-  const navNet = btcVal - FWD_DEBT;
-  const navPS = navNet / FWD_SHARES;
-  const target = navPS * mnav;
-  const ret = ((target - CURR_PRICE)/CURR_PRICE)*100;
-
-  document.getElementById('scenBtcVal').textContent = fmtMoney(btcP,0);
-  document.getElementById('scenMnavVal').textContent = mnav.toFixed(2)+'x';
-  document.getElementById('scenBtcVal2').textContent = fmtBn(btcVal);
-  document.getElementById('scenNavPS').textContent = fmtMoney(navPS,0);
-  document.getElementById('scenTarget').textContent = fmtMoney(target,0);
-  const tag = document.getElementById('scenReturn');
-  tag.textContent = (ret>=0?'+':'')+ret.toFixed(1)+'% from $'+CURR_PRICE.toLocaleString('en-US',{maximumFractionDigits:2});
-  tag.className = 'ot-tag '+(ret>=0?'up':'down');
-  paintSliders();
+function scenTargetPrice(btcP, mnavR) {
+  const btcVal = btcP * window.FWD_BTC;
+  const navNet = btcVal - window.FWD_DEBT;
+  const navPS = navNet / window.FWD_SHARES;
+  return navPS * mnavR;
 }
-[scenBtc, scenMnav].forEach(el=>el.addEventListener('input', ()=>{
-  // unselect preset radios when user moves a slider
-  document.querySelectorAll('input[name="preset"]').forEach(r=>r.checked=false);
-  recomputeScen();
-}));
-document.querySelectorAll('input[name="preset"]').forEach(r=>{
-  r.addEventListener('change', e=>{
-    const p = SCEN_PRESETS[e.target.value];
-    scenBtc.value = p.btc;
-    scenMnav.value = p.mnav;
-    recomputeScen();
-  });
-});
-recomputeScen();
 
-/* preset comparison chart */
-{
-  const labels = ['Bear','Base','Bull','Blue Sky'];
-  const data   = [SCEN_PRESET_TARGETS.bear, SCEN_PRESET_TARGETS.base, SCEN_PRESET_TARGETS.bull, SCEN_PRESET_TARGETS.sky];
-  const colors = ['rgba(255,90,110,0.75)','rgba(247,147,26,0.85)','rgba(40,208,122,0.85)','rgba(94,160,255,0.9)'];
+function setupScenarios(initialPrice) {
+  const scenBtc = document.getElementById('scenBtc');
+  const scenMnav = document.getElementById('scenMnav');
+
+  window.recomputeScen = function recomputeScen() {
+    const price = window.LIVE_CURRENT?.mstr ?? initialPrice;
+    const btcP = +scenBtc.value;
+    const mnav = +scenMnav.value;
+    const btcVal = btcP * window.FWD_BTC;
+    const navNet = btcVal - window.FWD_DEBT;
+    const navPS = navNet / window.FWD_SHARES;
+    const target = navPS * mnav;
+    const ret = ((target - price) / price) * 100;
+
+    setText('scenBtcVal', fmtMoney(btcP, 0));
+    setText('scenMnavVal', mnav.toFixed(2) + 'x');
+    setText('scenBtcVal2', fmtBn(btcVal));
+    setText('scenNavPS', fmtMoney(navPS, 0));
+    setText('scenTarget', fmtMoney(target, 0));
+    const tag = document.getElementById('scenReturn');
+    tag.textContent = fmtPct(ret) + ' from ' + fmtMoney(price);
+    tag.className = 'ot-tag ' + (ret >= 0 ? 'up' : 'down');
+    paintSliders();
+  };
+
+  [scenBtc, scenMnav].forEach((el) =>
+    el.addEventListener('input', () => {
+      document.querySelectorAll('input[name="preset"]').forEach((r) => (r.checked = false));
+      window.recomputeScen();
+    })
+  );
+  document.querySelectorAll('input[name="preset"]').forEach((r) => {
+    r.addEventListener('change', (e) => {
+      const p = SCEN_PRESETS[e.target.value];
+      scenBtc.value = p.btc;
+      scenMnav.value = p.mnav;
+      window.recomputeScen();
+    });
+  });
+  window.recomputeScen();
+}
+
+function initScenChart() {
+  const labels = ['Bear', 'Base', 'Bull', 'Blue Sky'];
+  const keys = ['bear', 'base', 'bull', 'sky'];
+  const data = keys.map((k) => scenTargetPrice(SCEN_PRESETS[k].btc, SCEN_PRESETS[k].mnav));
+  const colors = [
+    'rgba(255,90,110,0.75)',
+    'rgba(247,147,26,0.85)',
+    'rgba(40,208,122,0.85)',
+    'rgba(94,160,255,0.9)',
+  ];
+
   const currLine = {
-    id:'currLine',
-    afterDatasetsDraw(chart){
-      const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
-      const {ctx, chartArea, scales:{x}} = chart;
-      const xp = x.getPixelForValue(CURR_PRICE);
+    id: 'currLine',
+    afterDatasetsDraw(chart) {
+      const price = window.LIVE_CURRENT?.mstr ?? 0;
+      const { ctx, chartArea, scales: { x } } = chart;
+      const xp = x.getPixelForValue(price);
       ctx.save();
-      ctx.strokeStyle='rgba(255,255,255,0.7)';
-      ctx.setLineDash([4,4]);
-      ctx.lineWidth=1.2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(xp, chartArea.top);
       ctx.lineTo(xp, chartArea.bottom);
       ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.85)';
-      ctx.font="11px 'JetBrains Mono', monospace";
-      ctx.fillText(`Now $${CURR_PRICE}`, xp+6, chartArea.top+14);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = "11px 'JetBrains Mono', monospace";
+      ctx.fillText('Now ' + fmtMoney(price), xp + 6, chartArea.top + 14);
       ctx.restore();
-    }
-  };
-  new Chart(document.getElementById('scenChart'),{
-    type:'bar',
-    data:{labels,datasets:[{label:'Target',data,backgroundColor:colors,borderRadius:8,borderSkipped:false}]},
-    options:{
-      indexAxis:'y',
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{label:c=>'$'+c.parsed.x}}
-      },
-      scales:{
-        x:{grid:{color:COLORS.gridDim}, ticks:{callback:v=>'$'+v}, suggestedMax:850},
-        y:{grid:{display:false}}
-      }
     },
-    plugins:[currLine]
+  };
+
+  const ctx = document.getElementById('scenChart');
+  if (!ctx) return;
+  scenChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Target', data, backgroundColor: colors, borderRadius: 8, borderSkipped: false }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => '$' + c.parsed.x } } },
+      scales: {
+        x: { grid: { color: COLORS.gridDim }, ticks: { callback: (v) => '$' + v } },
+        y: { grid: { display: false } },
+      },
+    },
+    plugins: [currLine],
   });
 }
 
-/* ============== ANALYST CHART ============== */
-{
-  // sort by target descending for bar chart aesthetics
-  const sorted = [...TARGETS].sort((a,b)=>b.target-a.target);
-  const avgT = 331;
-  const colors = sorted.map(t => t.target >= avgT*1.2 ? 'rgba(40,208,122,0.85)'
-                              : t.target < CURR_PRICE  ? 'rgba(255,90,110,0.75)'
-                              : 'rgba(247,147,26,0.80)');
+/* ============== ANALYSTS ============== */
+function initAnalystChart() {
+  if (typeof TARGETS === 'undefined') return;
+  const sorted = [...TARGETS].sort((a, b) => b.target - a.target);
+  const avgT = sorted.reduce((s, t) => s + t.target, 0) / sorted.length;
+  const price = window.LIVE_CURRENT?.mstr ?? 0;
+
+  const colors = sorted.map((t) =>
+    t.target >= avgT * 1.2
+      ? 'rgba(40,208,122,0.85)'
+      : t.target < price
+        ? 'rgba(255,90,110,0.75)'
+        : 'rgba(247,147,26,0.80)'
+  );
+
   const refLines = {
-    id:'refLines',
-    afterDatasetsDraw(chart){
-      const CURR_PRICE = window.LIVE_CURRENT ? window.LIVE_CURRENT.mstr : 187.59;
-      const {ctx, chartArea, scales:{x}} = chart;
-      [{v:CURR_PRICE,c:'rgba(255,255,255,0.75)',l:`Now $${CURR_PRICE}`},
-       {v:avgT, c:'rgba(247,147,26,0.85)', l:`Avg $${avgT}`}].forEach(o=>{
+    id: 'refLines',
+    afterDatasetsDraw(chart) {
+      const p = window.LIVE_CURRENT?.mstr ?? 0;
+      const { ctx, chartArea, scales: { x } } = chart;
+      [
+        { v: p, c: 'rgba(255,255,255,0.75)', l: 'Now ' + fmtMoney(p) },
+        { v: avgT, c: 'rgba(247,147,26,0.85)', l: 'Avg $' + Math.round(avgT) },
+      ].forEach((o) => {
         const xp = x.getPixelForValue(o.v);
         ctx.save();
         ctx.strokeStyle = o.c;
-        ctx.setLineDash([4,4]);
+        ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(xp, chartArea.top);
         ctx.lineTo(xp, chartArea.bottom);
         ctx.stroke();
-        ctx.fillStyle=o.c;
-        ctx.font="11px 'JetBrains Mono', monospace";
-        ctx.fillText(o.l, xp+6, chartArea.top+14);
+        ctx.fillStyle = o.c;
+        ctx.font = "11px 'JetBrains Mono', monospace";
+        ctx.fillText(o.l, xp + 6, chartArea.top + 14);
         ctx.restore();
       });
-    }
+    },
   };
-  new Chart(document.getElementById('analystChart'),{
-    type:'bar',
-    data:{
-      labels: sorted.map(t=>t.firm),
-      datasets:[{
-        label:'Target',
-        data: sorted.map(t=>t.target),
-        backgroundColor:colors,
-        borderRadius:6, borderSkipped:false,
-      }]
+
+  const ctx = document.getElementById('analystChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map((t) => t.firm),
+      datasets: [
+        {
+          label: 'Target',
+          data: sorted.map((t) => t.target),
+          backgroundColor: colors,
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+      ],
     },
-    options:{
-      indexAxis:'y',
-      responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          callbacks:{
-            title:(items)=>{
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
               const t = sorted[items[0].dataIndex];
-              return `${t.firm} · ${t.analyst}`;
+              return t.firm + ' · ' + t.analyst;
             },
-            label:(c)=>`Target: $${c.parsed.x}`
-          }
-        }
+            label: (c) => 'Target: $' + c.parsed.x,
+          },
+        },
       },
-      scales:{
-        x:{grid:{color:COLORS.gridDim}, ticks:{callback:v=>'$'+v}, suggestedMax:600},
-        y:{grid:{display:false}, ticks:{font:{size:12}}}
-      }
+      scales: {
+        x: { grid: { color: COLORS.gridDim }, ticks: { callback: (v) => '$' + v } },
+        y: { grid: { display: false }, ticks: { font: { size: 12 } } },
+      },
     },
-    plugins:[refLines]
+    plugins: [refLines],
   });
 }
-
-/* time scale needs adapter — use raw labels (strings) instead */

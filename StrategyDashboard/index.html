@@ -46,7 +46,7 @@
         <div class="subtitle" id="heroDate">Medium-term investment dashboard — May 9, 2026</div>
         <div class="tagline">
           <span class="dot"></span>
-          World's largest corporate Bitcoin holder — <strong>818,334 BTC</strong>
+          World's largest corporate Bitcoin holder — <strong id="heroBtcHeld">— BTC</strong>
         </div>
       </div>
       <div class="hero-right">
@@ -58,12 +58,12 @@
         <div class="kpi">
           <div class="kpi-label">Drawdown from 52w high</div>
           <div class="kpi-value down"><span id="heroDrawdown">−59</span><span class="kpi-suffix">%</span></div>
-          <div class="kpi-note">52w high $457.22</div>
+          <div class="kpi-note">52w high <span id="hero52wHigh">—</span></div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Avg analyst target</div>
-          <div class="kpi-value up">$331</div>
-          <div class="kpi-note">+76% upside · 10 analysts</div>
+          <div class="kpi-value up" id="heroAnalystAvg">—</div>
+          <div class="kpi-note" id="heroAnalystNote">—</div>
         </div>
       </div>
     </div>
@@ -86,23 +86,23 @@
     <p class="section-sub">MSTR is a leveraged Bitcoin proxy. The treasury — not software revenue — drives the equity story.</p>
 
     <div class="big-stat">
-      <div class="big-stat-num">818,334 <span class="big-stat-unit">BTC</span></div>
+      <div class="big-stat-num"><span id="btcHeldDisplay">—</span> <span class="big-stat-unit">BTC</span></div>
       <div class="big-stat-row">
         <div class="big-stat-card">
-          <div class="bsc-label" id="btcFairValueLabel">Fair value @ $80,395</div>
-          <div class="bsc-value" id="btcFairValue">$65.79B</div>
+          <div class="bsc-label" id="btcFairValueLabel">Fair value @ —</div>
+          <div class="bsc-value" id="btcFairValue">—</div>
         </div>
         <div class="big-stat-card">
           <div class="bsc-label">Net of LT debt</div>
-          <div class="bsc-value" id="btcNetDebt">$57.62B</div>
+          <div class="bsc-value" id="btcNetDebt">—</div>
         </div>
         <div class="big-stat-card">
           <div class="bsc-label">YTD BTC growth</div>
-          <div class="bsc-value">+22%</div>
+          <div class="bsc-value" id="btcYtdGrowth">—</div>
         </div>
         <div class="big-stat-card">
-          <div class="bsc-label">% of total assets</div>
-          <div class="bsc-value">~95%</div>
+          <div class="bsc-label">Treasury as of</div>
+          <div class="bsc-value" id="btcAsOf">—</div>
         </div>
       </div>
     </div>
@@ -110,7 +110,7 @@
     <div class="chart-card">
       <div class="chart-header">
         <h3>MSTR vs. BTC — 18-month relative performance</h3>
-        <div class="chart-sub">Both rebased to 100 at Nov 1, 2024</div>
+        <div class="chart-sub" id="relChartSub">Rebased to 100 at series start</div>
       </div>
       <div class="chart-wrap"><canvas id="relChart"></canvas></div>
     </div>
@@ -194,15 +194,15 @@
     <div class="tech-row">
       <div class="levels-card">
         <h3>Key levels</h3>
-        <table class="levels-table">
-          <tr><td>52-week high</td><td>$457.22</td></tr>
-          <tr><td>52-week low</td><td>$104.17</td></tr>
-          <tr><td>MA20</td><td>$167.35</td></tr>
-          <tr><td>MA50</td><td>$147.41</td></tr>
-          <tr><td>MA200</td><td>$223.46</td></tr>
-          <tr><td>RSI(14)</td><td>59.7</td></tr>
-          <tr><td>Beta vs BTC (252d)</td><td>1.30</td></tr>
-          <tr><td>Annualized vol</td><td>69%</td></tr>
+        <table class="levels-table" id="levels-table">
+          <tr><td>52-week high</td><td id="lvl52High">—</td></tr>
+          <tr><td>52-week low</td><td id="lvl52Low">—</td></tr>
+          <tr><td>MA20</td><td id="lvlMa20">—</td></tr>
+          <tr><td>MA50</td><td id="lvlMa50">—</td></tr>
+          <tr><td>MA200</td><td id="lvlMa200">—</td></tr>
+          <tr><td>RSI(14)</td><td id="lvlRsi">—</td></tr>
+          <tr><td>Beta vs BTC (252d)</td><td id="lvlBeta">—</td></tr>
+          <tr><td>Annualized vol</td><td id="lvlVol">—</td></tr>
         </table>
       </div>
       <div class="wave-card">
@@ -223,7 +223,7 @@
 <section id="scenarios" class="section">
   <div class="container">
     <h2 class="section-title">Scenario builder</h2>
-    <p class="section-sub">Choose a preset or move the sliders. Forward capital structure assumes ~360M diluted shares and $8.2B long-term debt.</p>
+    <p class="section-sub">Choose a preset or move the sliders. Forward capital structure uses live BTC holdings, debt, and share count from Strategy disclosures.</p>
 
     <div class="scen-grid">
       <div class="scen-controls">
@@ -272,10 +272,10 @@
     <p class="section-sub">Most recent published targets across covering firms. Consensus: <strong>Strong Buy</strong> · 10 analysts · 90% bullish.</p>
 
     <div class="cons-row">
-      <div class="cons-tile"><div class="ct-label">Average</div><div class="ct-val">$331</div><div class="ct-sub up">+76%</div></div>
-      <div class="cons-tile"><div class="ct-label">Median</div><div class="ct-val">$335</div><div class="ct-sub up">+78%</div></div>
-      <div class="cons-tile"><div class="ct-label">High</div><div class="ct-val up">$570</div><div class="ct-sub">Benchmark</div></div>
-      <div class="cons-tile"><div class="ct-label">Low</div><div class="ct-val down">$54</div><div class="ct-sub">Wells Fargo</div></div>
+      <div class="cons-tile"><div class="ct-label">Average</div><div class="ct-val" id="consAvg">—</div><div class="ct-sub up" id="consAvgPct">—</div></div>
+      <div class="cons-tile"><div class="ct-label">Median</div><div class="ct-val" id="consMedian">—</div><div class="ct-sub up" id="consMedianPct">—</div></div>
+      <div class="cons-tile"><div class="ct-label">High</div><div class="ct-val up" id="consHigh">—</div><div class="ct-sub" id="consHighFirm">—</div></div>
+      <div class="cons-tile"><div class="ct-label">Low</div><div class="ct-val down" id="consLow">—</div><div class="ct-sub" id="consLowFirm">—</div></div>
     </div>
 
     <div class="chart-card">
@@ -375,7 +375,7 @@
 <footer class="foot">
   <div class="container">
     <div>MSTR Medium-Term Dashboard · Built <span id="footerDate">May 9, 2026</span></div>
-    <div class="foot-sub">Single-page interactive view · Inputs are illustrative scenarios</div>
+    <div class="foot-sub">Live data via Yahoo Finance &amp; Strategy.com · <span id="dataFreshness">Updating…</span></div>
   </div>
 </footer>
 
