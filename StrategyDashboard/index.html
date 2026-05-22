@@ -129,7 +129,7 @@
 <section id="mnav" class="section">
   <div class="container">
     <h2 class="section-title">mNAV Calculator</h2>
-    <p class="section-sub">Adjust the inputs to see how Bitcoin price, BTC count, debt, share count, and stock price drive net-asset-value and the implied premium / discount.</p>
+    <p class="section-sub">Uses Strategy’s definition: mNAV = enterprise value ÷ BTC reserve. EV = market cap + debt + preferred − cash (pref/cash from latest disclosure).</p>
 
     <div class="calc-grid">
       <div class="calc-inputs">
@@ -156,8 +156,8 @@
       </div>
 
       <div class="calc-outputs">
-        <div class="out-tile"><div class="ot-label">BTC value (gross)</div><div class="ot-val" id="outBtcValue">$65.79B</div></div>
-        <div class="out-tile"><div class="ot-label">NAV net of debt</div><div class="ot-val" id="outNav">$57.62B</div></div>
+        <div class="out-tile"><div class="ot-label">BTC reserve</div><div class="ot-val" id="outBtcValue">$65.79B</div></div>
+        <div class="out-tile"><div class="ot-label">Enterprise value</div><div class="ot-val" id="outNav">$57.62B</div></div>
         <div class="out-tile"><div class="ot-label">NAV / diluted share</div><div class="ot-val" id="outNavPerShare">$172.57</div></div>
         <div class="out-tile out-tile-hero">
           <div class="ot-label">mNAV ratio</div>
@@ -169,7 +169,7 @@
 
     <div class="chart-card">
       <div class="chart-header">
-        <h3>Market cap vs. NAV — premium / discount band</h3>
+        <h3>Enterprise value vs. BTC reserve</h3>
         <div class="chart-sub">Updates as you move the sliders above</div>
       </div>
       <div class="chart-wrap chart-short"><canvas id="mnavBar"></canvas></div>

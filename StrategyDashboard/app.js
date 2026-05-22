@@ -183,6 +183,8 @@ function initDashboard(data) {
 
   window.FWD_BTC = company.btcHeld;
   window.FWD_DEBT = company.debt;
+  window.FWD_PREF = company.pref ?? 0;
+  window.FWD_CASH = company.cash ?? 0;
   window.FWD_SHARES = shares;
 
   if (data.fetchedAt) {
@@ -254,7 +256,7 @@ function renderMetrics(data) {
     },
     { label: 'Long-term debt', value: fmtBn(company.debt), sub: 'Strategy disclosure' },
     { label: 'Cash', value: fmtBn(company.cash), sub: company.asOfDate ? 'as of ' + company.asOfDate : '' },
-    { label: 'mNAV ratio', value: mnav.ratio != null ? mnav.ratio.toFixed(2) + '×' : '—', sub: 'Market cap / NAV' },
+    { label: 'mNAV ratio', value: mnav.ratio != null ? mnav.ratio.toFixed(2) + '×' : '—', sub: 'EV / BTC reserve (Strategy)' },
     {
       label: 'NAV / share',
       value: mnav.navPerShare != null ? fmtMoney(mnav.navPerShare) : '—',
@@ -539,20 +541,23 @@ function setupMnavCalculator() {
     const debt = +mnavInputs.ltDebt.value * 1e9;
     const sh = +mnavInputs.dilShares.value * 1e6;
     const px = +mnavInputs.mstrPrice.value;
+    const pref = window.FWD_PREF ?? 0;
+    const cash = window.FWD_CASH ?? 0;
 
-    const btcValue = btcP * btcN;
-    const navNet = btcValue - debt;
-    const navPS = navNet / sh;
+    const btcReserve = btcP * btcN;
     const mktCap = px * sh;
-    const mnavR = mktCap / navNet;
+    const enterpriseValue = mktCap + debt + pref - cash;
+    const navNet = btcReserve - debt;
+    const navPS = navNet / sh;
+    const mnavR = btcReserve > 0 ? enterpriseValue / btcReserve : 0;
 
     setText('btcPriceVal', fmtMoney(btcP, 0));
     setText('btcHeldVal', btcN.toLocaleString());
     setText('ltDebtVal', '$' + (+mnavInputs.ltDebt.value).toFixed(2) + 'B');
     setText('dilSharesVal', (+mnavInputs.dilShares.value).toFixed(1));
     setText('mstrPriceVal', fmtMoney(px, 2));
-    setText('outBtcValue', fmtBn(btcValue));
-    setText('outNav', fmtBn(navNet));
+    setText('outBtcValue', fmtBn(btcReserve));
+    setText('outNav', fmtBn(enterpriseValue));
     setText('outNavPerShare', fmtMoney(navPS, 2));
     setHtml('outMnav', mnavR.toFixed(3) + '<span class="ot-suffix">x</span>');
     setText('outMnavTag', fmtMnavTag(mnavR));
@@ -560,11 +565,11 @@ function setupMnavCalculator() {
     paintSliders();
 
     const barData = {
-      labels: ['Market cap', 'NAV (BTC − debt)'],
+      labels: ['Enterprise value', 'BTC reserve'],
       datasets: [
         {
           label: 'Value',
-          data: [mktCap / 1e9, navNet / 1e9],
+          data: [enterpriseValue / 1e9, btcReserve / 1e9],
           backgroundColor: [COLORS.gold, 'rgba(94,160,255,0.7)'],
           borderRadius: 8,
           borderSkipped: false,
@@ -590,7 +595,7 @@ function setupMnavCalculator() {
         },
       });
     } else {
-      mnavBarChart.data.datasets[0].data = [mktCap / 1e9, navNet / 1e9];
+      mnavBarChart.data.datasets[0].data = [enterpriseValue / 1e9, btcReserve / 1e9];
       mnavBarChart.update('none');
     }
   };
@@ -610,10 +615,10 @@ const SCEN_PRESETS = {
 let scenChart;
 
 function scenTargetPrice(btcP, mnavR) {
-  const btcVal = btcP * window.FWD_BTC;
-  const navNet = btcVal - window.FWD_DEBT;
-  const navPS = navNet / window.FWD_SHARES;
-  return navPS * mnavR;
+  const btcReserve = btcP * window.FWD_BTC;
+  const enterpriseValue = mnavR * btcReserve;
+  const marketCap = enterpriseValue - window.FWD_DEBT - window.FWD_PREF + window.FWD_CASH;
+  return marketCap / window.FWD_SHARES;
 }
 
 function setupScenarios(initialPrice) {
@@ -624,10 +629,12 @@ function setupScenarios(initialPrice) {
     const price = window.LIVE_CURRENT?.mstr ?? initialPrice;
     const btcP = +scenBtc.value;
     const mnav = +scenMnav.value;
-    const btcVal = btcP * window.FWD_BTC;
-    const navNet = btcVal - window.FWD_DEBT;
+    const btcReserve = btcP * window.FWD_BTC;
+    const enterpriseValue = mnav * btcReserve;
+    const marketCap = enterpriseValue - window.FWD_DEBT - window.FWD_PREF + window.FWD_CASH;
+    const navNet = btcReserve - window.FWD_DEBT;
     const navPS = navNet / window.FWD_SHARES;
-    const target = navPS * mnav;
+    const target = marketCap / window.FWD_SHARES;
     const ret = ((target - price) / price) * 100;
 
     setText('scenBtcVal', fmtMoney(btcP, 0));

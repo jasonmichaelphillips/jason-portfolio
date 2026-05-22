@@ -214,10 +214,15 @@ export async function buildFinancePayload() {
   const btcHeld = treasury?.btcHeld ?? 818334;
   const debt = treasury?.debt ?? 8.17e9;
   const cash = treasury?.cash ?? 2.21e9;
+  const pref = treasury?.pref ?? 0;
   const shares = treasury?.basicShares ?? 333.9e6;
-  const btcFair = btcPrice * btcHeld;
-  const navNet = btcFair - debt;
-  const mnavRatio = navNet > 0 ? (mstrPrice * shares) / navNet : null;
+  const marketCap = mstrPrice * shares;
+  const btcReserve = btcPrice * btcHeld;
+  // Strategy.com definition: mNAV = Enterprise Value / BTC Reserve
+  // EV = market cap + debt + preferred − cash
+  const enterpriseValue = marketCap + debt + pref - cash;
+  const mnavRatio = btcReserve > 0 ? enterpriseValue / btcReserve : null;
+  const navNet = btcReserve - debt;
   const navPerShare = shares > 0 ? navNet / shares : null;
 
   const eighteenMonthsAgo = new Date();
@@ -239,16 +244,16 @@ export async function buildFinancePayload() {
       fiftyTwoWeekLow: parseFloat(fiftyTwoWeekLow.toFixed(2)),
       volume: meta.regularMarketVolume ?? null,
       averageVolume: meta.averageDailyVolume10Day ?? null,
-      marketCap: shares * mstrPrice,
+      marketCap,
     },
     company: {
       btcHeld,
       debt,
       cash,
+      pref,
       shares,
       btcYieldYtd: treasury?.btcYieldYtd ?? null,
       btcGainYtd: treasury?.btcGainYtd ?? null,
-      pref: treasury?.pref ?? null,
       asOfDate: treasury?.asOfDate ?? null,
       treasuryHistory: treasury?.history ?? [],
     },
@@ -270,11 +275,13 @@ export async function buildFinancePayload() {
       fibs,
     },
     mnav: {
-      ratio: mnavRatio != null ? parseFloat(mnavRatio.toFixed(3)) : null,
-      btcFairValue: btcFair,
+      ratio: mnavRatio != null ? parseFloat(mnavRatio.toFixed(2)) : null,
+      btcReserve,
+      enterpriseValue,
       navNet,
       navPerShare: navPerShare != null ? parseFloat(navPerShare.toFixed(2)) : null,
-      marketCap: mstrPrice * shares,
+      marketCap,
+      method: 'strategy',
     },
     fetchedAt: new Date().toISOString(),
   };
