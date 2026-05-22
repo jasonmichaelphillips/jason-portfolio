@@ -19,7 +19,12 @@ Chart.defaults.font.size = 12;
 Chart.defaults.borderColor = COLORS.gridDim;
 
 const fmtMoney = (n, d = 2) => '$' + n.toLocaleString('en-US', { maximumFractionDigits: d });
-const fmtBn = (n) => '$' + (n / 1e9).toFixed(2) + 'B';
+const fmtBn = (n) => {
+  if (n == null || !Number.isFinite(n)) return '—';
+  return '$' + (n / 1e9).toFixed(2) + 'B';
+};
+const btcReserveValue = (mnav, btc, btcHeld) =>
+  mnav?.btcReserve ?? (btc && btcHeld ? btc * btcHeld : null);
 const fmtPct = (n, signed = true) => {
   const s = signed && n >= 0 ? '+' : '';
   return s + n.toFixed(1) + '%';
@@ -143,8 +148,9 @@ function initDashboard(data) {
   }
 
   setText('btcHeldDisplay', company.btcHeld.toLocaleString('en-US'));
-  setText('btcFairValueLabel', 'Fair value @ ' + fmtMoney(btc, 0));
-  setText('btcFairValue', fmtBn(mnav.btcFairValue));
+  const btcReserve = btcReserveValue(mnav, btc, company.btcHeld);
+  setText('btcFairValueLabel', 'BTC reserve @ ' + fmtMoney(btc, 0));
+  setText('btcFairValue', fmtBn(btcReserve));
   setText('btcNetDebt', fmtBn(mnav.navNet));
   setText('btcYtdGrowth', company.btcYieldYtd != null ? '+' + company.btcYieldYtd + '%' : '—');
   setText('btcAsOf', company.asOfDate || current.date);
@@ -252,7 +258,7 @@ function renderMetrics(data) {
     {
       label: 'BTC held',
       value: company.btcHeld.toLocaleString('en-US'),
-      sub: fmtBn(mnav.btcFairValue) + ' fair value',
+      sub: fmtBn(btcReserveValue(mnav, btc, company.btcHeld)) + ' BTC reserve',
     },
     { label: 'Long-term debt', value: fmtBn(company.debt), sub: 'Strategy disclosure' },
     { label: 'Cash', value: fmtBn(company.cash), sub: company.asOfDate ? 'as of ' + company.asOfDate : '' },
