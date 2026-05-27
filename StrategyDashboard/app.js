@@ -38,7 +38,8 @@ function getApiUrl() {
   ) {
     return 'http://localhost:3000/api/finance';
   }
-  return `${window.location.protocol}//${window.location.hostname}/api/finance`;
+  // Always use HTTPS in production to ensure data integrity
+  return `https://jasonmichaelphillips.com/api/finance`;
 }
 
 function paintSliders() {
@@ -258,24 +259,18 @@ function updateAnalystSection(price, analysts, targets) {
   if (sub) {
     const parts = [];
     if (c?.recommendation) parts.push(c.recommendation);
-    parts.push((c?.analystCount ?? targets.length) + ' analysts');
+    parts.push(`${c?.analystCount ?? targets.length} analysts`);
     if (c?.bullishPct != null) parts.push(c.bullishPct + '% bullish');
     const source = analysts?.source === 'yahoo' ? 'Yahoo Finance' : 'cached';
-    sub.innerHTML =
-      'Live targets via ' +
-      source +
-      (analysts?.fetchedAt
-        ? ' · ' +
-          new Date(analysts.fetchedAt).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-          })
-        : '') +
-      '. Consensus: <strong>' +
-      parts.join(' · ') +
-      '</strong>';
+    
+    const dateStr = analysts?.fetchedAt 
+      ? ' · ' + new Date(analysts.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) 
+      : '';
+
+    sub.textContent = `Live targets via ${source}${dateStr}. Consensus: `;
+    const strong = document.createElement('strong');
+    strong.textContent = parts.join(' · ');
+    sub.appendChild(strong);
   }
 }
 
@@ -328,14 +323,18 @@ function renderMetrics(data) {
   metrics.forEach((m) => {
     const el = document.createElement('div');
     el.className = 'metric';
-    el.innerHTML =
-      '<div class="metric-label">' +
-      m.label +
-      '</div><div class="metric-value">' +
-      m.value +
-      '</div><div class="metric-sub">' +
-      m.sub +
-      '</div>';
+    
+    const labelEl = document.createElement('div');
+    labelEl.className = 'metric-label';
+    labelEl.textContent = m.label;
+    const valueEl = document.createElement('div');
+    valueEl.className = 'metric-value';
+    valueEl.textContent = m.value;
+    const subEl = document.createElement('div');
+    subEl.className = 'metric-sub';
+    subEl.textContent = m.sub;
+
+    el.append(labelEl, valueEl, subEl);
     grid.appendChild(el);
   });
 }
