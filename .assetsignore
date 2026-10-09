@@ -1,0 +1,14 @@
+.git
+.git/**
+.codex
+.codex/**
+.agents
+.agents/**
+backend
+backend/**
+cloudflare
+cloudflare/**
+node_modules
+node_modules/**
+wrangler.toml
+package-lock.json

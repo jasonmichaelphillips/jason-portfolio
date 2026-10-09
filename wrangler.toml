@@ -1,0 +1,19 @@
+name = "jason-portfolio"
+main = "cloudflare/worker.js"
+compatibility_date = "2026-10-08"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+run_worker_first = ["/sitemap.xml", "/api/*", "/videos/*"]
+
+[triggers]
+crons = ["0 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jason-videos"
+database_id = "acc98fb9-8bec-483a-a884-a798fa17446d"
+
+[vars]
+YOUTUBE_CHANNEL_ID = "UCgR5VYHYy-u_HIiimcYQOMA"
