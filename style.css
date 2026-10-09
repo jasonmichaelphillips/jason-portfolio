@@ -389,18 +389,68 @@ footer {
 }
 
 .contact-links a {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
   padding: .65rem .75rem;
-  border: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 6px;
+  background: rgba(255, 255, 255, .045);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
   color: #ddd;
   font-size: .88rem;
   text-decoration: none;
-  transition: background .2s ease, color .2s ease;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
 }
 
 .contact-links a:hover {
-  background: #e50914;
+  background: rgba(229, 9, 20, .9);
+  border-color: rgba(255, 255, 255, .25);
   color: #fff;
+  transform: translateY(-2px);
+}
+
+.contact-links a span {
+  display: inline-grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 1.45rem;
+  place-items: center;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .1);
+  color: #fff;
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.contact-link--youtube span {
+  background: #f00 !important;
+}
+
+.contact-link--support span {
+  background: #ffdd00 !important;
+  color: #171717 !important;
+}
+
+.contact-link--facebook span {
+  background: #1877f2 !important;
+}
+
+.contact-link--instagram span {
+  background: linear-gradient(135deg, #feda75, #d62976 55%, #4f5bd5) !important;
+}
+
+.contact-link--twitch span {
+  background: #9146ff !important;
+}
+
+.contact-link--amazon span {
+  background: #ff9900 !important;
+  color: #171717 !important;
+}
+
+.contact-link--email span {
+  background: #555 !important;
 }
 
 .main-content {
