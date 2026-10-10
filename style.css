@@ -375,11 +375,51 @@ footer {
 }
 
 .contact-details summary {
-  padding: .75rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .75rem .85rem;
+  border: 1px solid rgba(229, 9, 20, .65);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(229, 9, 20, .24), rgba(229, 9, 20, .08));
   color: #fff;
   cursor: pointer;
   font-weight: 700;
-  list-style-position: inside;
+  list-style: none;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.contact-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.contact-details summary::after {
+  content: '＋';
+  color: #ff5963;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.contact-details[open] summary::after {
+  content: '−';
+}
+
+.contact-details summary:hover,
+.contact-details summary:focus-visible {
+  border-color: #ff5963;
+  background: rgba(229, 9, 20, .38);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contact-details summary small {
+  margin-left: auto;
+  color: #ffb2b7;
+  font-size: .72rem;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
 
 .contact-links {
@@ -541,7 +581,7 @@ footer {
   }
 
   .contact-details summary {
-    text-align: center;
+    justify-content: center;
   }
 
   .contact-links {
