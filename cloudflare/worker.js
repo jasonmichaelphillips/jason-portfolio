@@ -1,5 +1,31 @@
 const DEFAULT_CHANNEL_ID = "UCgR5VYHYy-u_HIiimcYQOMA";
 const SITE_URL = "https://jasonmichaelphillips.com";
+const TOPICS = [
+  {
+    slug: "hotel-reviews",
+    name: "Hotel Reviews",
+    description: "Hotel reviews, room tours, accommodation guides, and places to stay while traveling.",
+    keywords: ["hotel", "resort", "room tour", "room review", "accommodation", "residence"],
+  },
+  {
+    slug: "food-and-restaurants",
+    name: "Food & Restaurants",
+    description: "Restaurant visits, local food, street food, meals, markets, and food discoveries.",
+    keywords: ["food", "restaurant", "burger", "meal", "cafe", "café", "shabushi", "sticky rice", "market"],
+  },
+  {
+    slug: "walking-tours",
+    name: "Walking Tours",
+    description: "Walking tours, city explorations, night markets, train stations, and street-level travel.",
+    keywords: ["walking tour", "walking", "skywalk", "night market", "train station", "street tour", "city tour"],
+  },
+  {
+    slug: "travel-guides",
+    name: "Travel Guides",
+    description: "Practical travel guides, destination ideas, things to do, and cultural experiences.",
+    keywords: ["travel guide", "things to do", "guide", "travel", "tourist", "explore", "cultural"],
+  },
+];
 
 export default {
   async fetch(request, env, ctx) {
@@ -13,6 +39,10 @@ export default {
       return apiVideosResponse(env);
     }
 
+    if (url.pathname === "/topics" || url.pathname === "/topics/") {
+      return topicIndexResponse(env);
+    }
+
     if (url.pathname === "/api/sync" && request.method === "POST") {
       if (!env.SYNC_TOKEN || request.headers.get("Authorization") !== `Bearer ${env.SYNC_TOKEN}`) {
         return json({ error: "Unauthorized" }, 401);
@@ -24,6 +54,10 @@ export default {
 
     if (url.pathname.startsWith("/videos/")) {
       return videoPageResponse(env, url.pathname);
+    }
+
+    if (url.pathname.startsWith("/topics/")) {
+      return topicPageResponse(env, url.pathname);
     }
 
     return env.ASSETS.fetch(request);
@@ -72,7 +106,14 @@ async function syncVideos(env) {
         published_at = excluded.published_at,
         youtube_url = excluded.youtube_url,
         embed_url = excluded.embed_url,
-        updated_at = excluded.updated_at
+        updated_at = CASE
+          WHEN videos.title <> excluded.title
+            OR videos.description <> excluded.description
+            OR videos.thumbnail_url <> excluded.thumbnail_url
+            OR videos.published_at <> excluded.published_at
+          THEN excluded.updated_at
+          ELSE videos.updated_at
+        END
     `).bind(
       videoId,
       slug,
@@ -99,7 +140,8 @@ async function videoPageResponse(env, pathname) {
   const video = await env.DB.prepare("SELECT * FROM videos WHERE slug = ? LIMIT 1").bind(slug).first();
   if (!video) return notFoundResponse();
 
-  const html = renderVideoPage(video);
+  const related = await getRelatedVideos(env, video);
+  const html = renderVideoPage(video, related);
   return new Response(html, {
     headers: {
       "content-type": "text/html; charset=UTF-8",
@@ -119,19 +161,59 @@ async function apiVideosResponse(env) {
   return json({ items: result.results || [] });
 }
 
+async function topicIndexResponse(env) {
+  const videos = await getAllVideos(env);
+  const activeTopics = TOPICS.filter((topic) => videos.some((video) => matchesTopic(video, topic)));
+  return htmlResponse(renderTopicIndex(activeTopics));
+}
+
+async function topicPageResponse(env, pathname) {
+  const slug = decodeURIComponent(pathname.replace(/^\/topics\//, "").replace(/\/$/, ""));
+  const topic = TOPICS.find((item) => item.slug === slug);
+  if (!topic) return notFoundResponse();
+
+  const videos = (await getAllVideos(env)).filter((video) => matchesTopic(video, topic));
+  if (videos.length === 0) return notFoundResponse();
+  return htmlResponse(renderTopicPage(topic, videos));
+}
+
+async function getAllVideos(env) {
+  const result = await env.DB.prepare(`
+    SELECT id, slug, title, description, thumbnail_url, published_at, youtube_url, embed_url
+    FROM videos
+    ORDER BY published_at DESC
+    LIMIT 100
+  `).all();
+  return result.results || [];
+}
+
+async function getRelatedVideos(env, video) {
+  const allVideos = await getAllVideos(env);
+  const topics = TOPICS.filter((topic) => matchesTopic(video, topic));
+  return allVideos
+    .filter((candidate) => candidate.id !== video.id)
+    .map((candidate) => ({ video: candidate, score: topics.filter((topic) => matchesTopic(candidate, topic)).length }))
+    .sort((a, b) => b.score - a.score || new Date(b.video.published_at) - new Date(a.video.published_at))
+    .slice(0, 4)
+    .map((item) => item.video);
+}
+
+function matchesTopic(video, topic) {
+  const content = `${video.title} ${video.description}`.toLowerCase();
+  return topic.keywords.some((keyword) => content.includes(keyword));
+}
+
 async function sitemapResponse(env) {
-  const result = await env.DB.prepare("SELECT slug, published_at, updated_at FROM videos ORDER BY published_at DESC").all();
+  const videos = await getAllVideos(env);
+  const activeTopics = TOPICS.filter((topic) => videos.some((video) => matchesTopic(video, topic)));
   const urls = [
     `<url><loc>${SITE_URL}/</loc></url>`,
-    ...(result.results || []).map((video) => [
-      "<url>",
-      `<loc>${SITE_URL}/videos/${encodeURIComponent(video.slug)}/</loc>`,
-      `<lastmod>${new Date(video.updated_at || video.published_at).toISOString()}</lastmod>`,
-      "</url>",
-    ].join("")),
+    `<url><loc>${SITE_URL}/topics/</loc></url>`,
+    ...activeTopics.map((topic) => `<url><loc>${SITE_URL}/topics/${topic.slug}/</loc></url>`),
+    ...videos.map((video) => videoSitemapEntry(video)),
   ];
 
-  return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`, {
+  return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">${urls.join("")}</urlset>`, {
     headers: {
       "content-type": "application/xml; charset=UTF-8",
       "cache-control": "public, max-age=300, s-maxage=3600",
@@ -139,10 +221,29 @@ async function sitemapResponse(env) {
   });
 }
 
-function renderVideoPage(video) {
+function videoSitemapEntry(video) {
+  const title = escapeXml(video.title);
+  const description = escapeXml(truncate(stripHtml(video.description), 2048));
+  return [
+    "<url>",
+    `<loc>${SITE_URL}/videos/${encodeURIComponent(video.slug)}/</loc>`,
+    `<lastmod>${new Date(video.published_at).toISOString()}</lastmod>`,
+    "<video:video>",
+    `<video:thumbnail_loc>${escapeXml(video.thumbnail_url)}</video:thumbnail_loc>`,
+    `<video:title>${title}</video:title>`,
+    `<video:description>${description}</video:description>`,
+    `<video:player_loc allow_embed="yes">${escapeXml(video.embed_url)}</video:player_loc>`,
+    `<video:publication_date>${new Date(video.published_at).toISOString()}</video:publication_date>`,
+    "</video:video>",
+    "</url>",
+  ].join("");
+}
+
+function renderVideoPage(video, related) {
   const canonical = `${SITE_URL}/videos/${encodeURIComponent(video.slug)}/`;
   const description = truncate(stripHtml(video.description), 160);
   const publishedDate = new Date(video.published_at).toISOString();
+  const matchingTopics = TOPICS.filter((topic) => matchesTopic(video, topic));
   const schema = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
@@ -153,6 +254,16 @@ function renderVideoPage(video) {
     embedUrl: video.embed_url,
     contentUrl: video.youtube_url,
     mainEntityOfPage: canonical,
+    author: {
+      "@type": "Person",
+      name: "Jason Michael Phillips",
+      url: SITE_URL,
+    },
+    publisher: {
+      "@type": "Person",
+      name: "Jason Michael Phillips",
+      url: SITE_URL,
+    },
   };
 
   return `<!doctype html>
@@ -188,12 +299,72 @@ function renderVideoPage(video) {
       <p class="eyebrow">Travel &amp; Food Video</p>
       <h1>${escapeHtml(video.title)}</h1>
       <p class="published">Published ${new Date(video.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</p>
+      ${matchingTopics.length ? `<nav class="topic-tags" aria-label="Video topics">${matchingTopics.map((topic) => `<a href="/topics/${topic.slug}/">${escapeHtml(topic.name)}</a>`).join("")}</nav>` : ""}
       <div class="video-description">${paragraphs(video.description)}</div>
       <a class="watch-link" href="${escapeHtml(video.youtube_url)}" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a>
+      ${relatedSection(related)}
     </article>
   </main>
 </body>
 </html>`;
+}
+
+function renderTopicIndex(topics) {
+  const cards = topics.map((topic) => `<a class="topic-card" href="/topics/${topic.slug}/"><h2>${escapeHtml(topic.name)}</h2><p>${escapeHtml(topic.description)}</p><span>Explore videos ↗</span></a>`).join("");
+  return pageShell({
+    title: "Travel Video Topics | Jason Michael Phillips",
+    description: "Browse travel, food, hotel review, walking tour, and cultural experience videos by topic.",
+    canonical: `${SITE_URL}/topics/`,
+    body: `<header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/">Latest videos</a></header><main class="topic-detail"><p class="eyebrow">Explore the library</p><h1>Browse video topics</h1><p class="topic-intro">Discover travel stories, food adventures, hotel reviews, and walking tours organized by subject.</p><div class="topic-grid">${cards}</div></main>`,
+  });
+}
+
+function renderTopicPage(topic, videos) {
+  const cards = videos.map((video) => videoCard(video)).join("");
+  return pageShell({
+    title: `${topic.name} | Jason Michael Phillips`,
+    description: topic.description,
+    canonical: `${SITE_URL}/topics/${topic.slug}/`,
+    body: `<header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/topics/">All topics</a></header><main class="topic-detail"><p class="eyebrow">Automatically curated topic</p><h1>${escapeHtml(topic.name)}</h1><p class="topic-intro">${escapeHtml(topic.description)}</p><div class="related-grid">${cards}</div></main>`,
+  });
+}
+
+function relatedSection(videos) {
+  if (!videos.length) return "";
+  return `<section class="related-section"><h2>More videos</h2><div class="related-grid">${videos.map((video) => videoCard(video)).join("")}</div></section>`;
+}
+
+function videoCard(video) {
+  return `<a class="related-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" loading="lazy"><span>${escapeHtml(video.title)}</span></a>`;
+}
+
+function pageShell({ title, description, canonical, body }) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <link rel="canonical" href="${canonical}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${canonical}">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="video-page">${body}</body>
+</html>`;
+}
+
+function htmlResponse(html, status = 200) {
+  return new Response(html, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=UTF-8",
+      "cache-control": "public, max-age=300, s-maxage=3600",
+    },
+  });
 }
 
 function paragraphs(value) {
@@ -223,6 +394,10 @@ function decodeXml(value) {
 
 function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function escapeXml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
 function json(value, status = 200) {

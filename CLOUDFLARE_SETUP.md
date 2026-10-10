@@ -3,6 +3,7 @@
 This project uses one Cloudflare Worker, one D1 database, and one Cron Trigger.
 The Worker imports the latest videos from YouTube's public channel feed, stores
 their metadata in D1, serves SEO-friendly `/videos/<slug>/` pages, and creates
+automated topic pages, related-video links, video sitemap metadata, and
 `/sitemap.xml` automatically.
 
 ## 1. Install Wrangler
@@ -127,6 +128,22 @@ YouTube entry, creates a stable slug such as:
 When a crawler or visitor requests that URL, the Worker renders the complete
 HTML page from D1, including the title, description, YouTube embed, canonical
 URL, Open Graph tags, and `VideoObject` structured data.
+
+## Automated topic pages
+
+The Worker classifies each video by matching its title and description against
+the built-in topic vocabulary. No manual tagging is required. New videos are
+automatically included when they match topics such as:
+
+```text
+/topics/hotel-reviews/
+/topics/food-and-restaurants/
+/topics/walking-tours/
+/topics/travel-guides/
+```
+
+Each video page also receives topic links and automatically selected related
+videos. The topic pages and video pages are included in the generated sitemap.
 
 ## Important notes
 
