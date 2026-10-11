@@ -243,6 +243,20 @@ main {
   font-weight: 500;
 }
 
+.video-info p {
+  margin: 0.3rem 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.video-info p:last-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 /* Load More button */
 .load-more-container {
     text-align: center;
@@ -533,6 +547,12 @@ footer {
   font-size: .9rem;
   font-weight: 700;
   text-decoration: none;
+}
+
+.latest-heading > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .latest-heading a:hover {
@@ -859,6 +879,18 @@ footer {
   margin: 0 0 1rem;
 }
 
+.video-description a {
+  color: #ff6972;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.video-description a:hover {
+  color: #fff;
+}
+
 .watch-link {
   display: inline-block;
   margin-top: 1rem;
@@ -946,6 +978,88 @@ footer {
   line-height: 1.35;
 }
 
+.related-card small {
+  display: block;
+  padding: 0 .8rem .8rem;
+  color: #aaa;
+  font-size: .78rem;
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: 1.25rem;
+  color: #999;
+  font-size: .82rem;
+}
+
+.breadcrumbs a {
+  color: #ff5963;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover,
+.breadcrumbs a:focus-visible {
+  text-decoration: underline;
+}
+
+.archive-search {
+  max-width: 720px;
+  margin: 0 0 2rem;
+}
+
+.archive-search label {
+  display: block;
+  margin-bottom: .5rem;
+  color: #ddd;
+  font-weight: 700;
+}
+
+.archive-search > div {
+  display: flex;
+  gap: .6rem;
+}
+
+.archive-search input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 8px;
+  padding: .8rem 1rem;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  font: inherit;
+}
+
+.archive-search button,
+.pagination a {
+  border: 0;
+  border-radius: 8px;
+  padding: .8rem 1rem;
+  background: #e50914;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.archive-search button:hover,
+.pagination a:hover {
+  background: #ff5963;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  color: #aaa;
+}
+
 .topic-detail {
   width: min(100% - 2rem, 1100px);
   margin: 0 auto 4rem;
@@ -996,6 +1110,16 @@ footer {
 
   .video-detail h1 {
     font-size: 2rem;
+  }
+
+  .archive-search > div {
+    flex-direction: column;
+  }
+
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+    text-align: center;
   }
 }
 

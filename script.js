@@ -1,15 +1,11 @@
-const PLAYLIST_ID = 'PL0i4Tca5g7T_S5tipX5smaX_b0BjnP_gz';
 const WORKER_URL = '';
-let nextPageToken = '';
-let isMuted = false;
 let player;
 let featuredVideoId;
 let isLoading = false;
-let firstLoad = true;
 
-// Load YouTube IFrame API
+// Load the YouTube IFrame API for the featured video.
 const tag = document.createElement('script');
-tag.src = "https://www.youtube.com/iframe_api";
+tag.src = 'https://www.youtube.com/iframe_api';
 const firstScriptTag = document.getElementsByTagName('script')[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
@@ -17,11 +13,14 @@ function loadVideoInPlayer(videoId) {
     if (player) {
         player.loadVideoById(videoId);
         player.playVideo();
-        if (!isMuted) {
-            player.unMute();
-        }
-        document.getElementById('featured').scrollIntoView({ behavior: 'smooth' });
+        player.mute();
+        document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
     }
+}
+
+function formatDate(value) {
+    if (!value) return '';
+    return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 function createVideoCards(items, container) {
@@ -36,108 +35,66 @@ function createVideoCards(items, container) {
         const image = document.createElement('img');
         image.src = thumbnail;
         image.alt = title;
+        image.width = 640;
+        image.height = 360;
         image.loading = 'lazy';
         const info = document.createElement('div');
         info.className = 'video-info';
         const heading = document.createElement('h3');
         heading.textContent = title;
         info.appendChild(heading);
+        if (item.published_at) {
+            const date = document.createElement('p');
+            date.textContent = formatDate(item.published_at);
+            info.appendChild(date);
+        }
+        if (item.description) {
+            const description = document.createElement('p');
+            description.textContent = item.description.replace(/\s+/g, ' ').trim();
+            info.appendChild(description);
+        }
         videoCard.append(image, info);
         container.appendChild(videoCard);
     });
 }
 
-async function loadVideosInfinite() {
-    if (isLoading || (!nextPageToken && !firstLoad)) return;
+async function loadVideos() {
+    if (isLoading) return;
     isLoading = true;
     try {
-        const url = nextPageToken
-            ? `${WORKER_URL}/api/videos?pageToken=${nextPageToken}`
-            : `${WORKER_URL}/api/videos`;
-        const response = await fetch(url);
+        const response = await fetch(`${WORKER_URL}/api/videos`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        nextPageToken = data.nextPageToken;
-
         const videoGrid = document.getElementById('video-grid');
         let items = data.items || [];
 
-        // On first load, set featured video and skip it in the grid
-        if (firstLoad && items.length > 0) {
+        if (items.length > 0 && !player) {
             featuredVideoId = items[0].id || items[0].snippet?.resourceId?.videoId;
             player = new YT.Player('featured-video-player', {
-                width: '100%',
-                height: '100%',
-                videoId: featuredVideoId,
-                playerVars: {
-                    'playsinline': 1,
-                    'modestbranding': 1,
-                    'rel': 0,
-                    'autoplay': 1,
-                    'controls': 0,
-                    'disablekb': 1,
-                    'fs': 0,
-                    'iv_load_policy': 3,
-                    'loop': 1,
-                    'playlist': featuredVideoId,
-                    'showinfo': 0,
-                    'mute': 0,
-                    'enablejsapi': 1
-                },
+                width: '100%', height: '100%', videoId: featuredVideoId,
+                playerVars: { playsinline: 1, modestbranding: 1, rel: 0, autoplay: 1, controls: 1, disablekb: 0, fs: 0, iv_load_policy: 3, loop: 1, playlist: featuredVideoId, showinfo: 0, mute: 1, enablejsapi: 1 },
                 events: {
-                    'onReady': function(event) {
-                        if (!isMuted) event.target.unMute();
-                        event.target.playVideo();
-                    },
-                    'onStateChange': function(event) {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            player.playVideo();
-                        }
-                    }
+                    onReady: event => { event.target.mute(); event.target.playVideo(); },
+                    onStateChange: event => { if (event.data === YT.PlayerState.ENDED) player.playVideo(); }
                 }
             });
-            items = items.slice(1); // Remove featured from grid
-            firstLoad = false;
+            items = items.slice(1);
         }
-        createVideoCards(items, videoGrid);
+
+        // The Worker renders these cards for search crawlers. This fallback keeps
+        // the page usable if the API is temporarily unavailable during a deploy.
+        if (videoGrid && videoGrid.children.length === 0) createVideoCards(items, videoGrid);
     } catch (error) {
         console.error('Error loading videos:', error);
-        if (firstLoad) {
-            document.getElementById('video-grid').innerHTML = '<p>Error loading videos. Please try again later.</p>';
-        }
+        const grid = document.getElementById('video-grid');
+        if (grid && grid.children.length === 0) grid.innerHTML = '<p>Video library temporarily unavailable. Please try again later.</p>';
+    } finally {
+        isLoading = false;
     }
-    isLoading = false;
 }
 
-function onYouTubeIframeAPIReady() {
-    loadVideosInfinite();
-}
+function onYouTubeIframeAPIReady() { loadVideos(); }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Infinite scroll
-    window.addEventListener('scroll', () => {
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 400)) {
-            loadVideosInfinite();
-        }
-    });
-
-    // Mute/unmute button
-    const muteButton = document.getElementById('mute-button');
-    muteButton?.addEventListener('click', () => {
-        if (player) {
-            if (isMuted) {
-                player.unMute();
-                muteButton.textContent = 'Mute';
-            } else {
-                player.mute();
-                muteButton.textContent = 'Unmute';
-            }
-            isMuted = !isMuted;
-        }
-    });
-
-    // If YouTube API is already loaded
-    if (window.YT && window.YT.Player) {
-        onYouTubeIframeAPIReady();
-    }
+    if (window.YT && window.YT.Player) onYouTubeIframeAPIReady();
 });

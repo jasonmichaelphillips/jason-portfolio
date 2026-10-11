@@ -45,8 +45,7 @@ Run:
 npx wrangler dev
 ```
 
-In a second terminal, run the local sync endpoint only if you configured a
-local `SYNC_TOKEN`; otherwise use the scheduled handler after deployment.
+The scheduled handler performs the import after deployment.
 
 The public endpoints will be:
 
@@ -55,30 +54,41 @@ http://localhost:8787/
 http://localhost:8787/api/videos
 http://localhost:8787/sitemap.xml
 http://localhost:8787/videos/<slug>/
+http://localhost:8787/videos/
+http://localhost:8787/topics/
+http://localhost:8787/destinations/
+http://localhost:8787/feed.xml
 ```
 
-## 4. Populate the database once
+## 4. Populate the database automatically
 
-Create a secret used only for the manual sync endpoint:
-
-```bash
-npx wrangler secret put SYNC_TOKEN
-```
-
-Enter a long random value when prompted. After deployment, run:
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer YOUR_SYNC_TOKEN" \
-  https://jasonmichaelphillips.com/api/sync
-```
-
-The response should report the number of videos imported. You can then check:
+After `YOUTUBE_API_KEY` is configured and deployed, the hourly Cron handler
+imports the complete uploads playlist once, records the completion marker in
+D1, and then syncs future uploads from the public feed. You can check:
 
 ```text
 https://jasonmichaelphillips.com/api/videos
 https://jasonmichaelphillips.com/sitemap.xml
 ```
+
+### Optional: import the complete YouTube archive
+
+The public channel feed is enough for the hourly automatic sync, but it only
+contains recent uploads. To import the complete archive, enable YouTube Data
+API v3 in a Google Cloud project, create an API key restricted to that API, and
+store the key as a Cloudflare secret:
+
+```bash
+npx wrangler secret put YOUTUBE_API_KEY
+```
+
+After deploying, the next scheduled Worker run automatically follows the
+channel's uploads playlist through every page of results. It records a
+completion marker in D1, so the expensive archive import runs once; future
+hourly runs use the free public feed for new uploads.
+
+There is no public manual sync endpoint. This keeps the production Worker
+surface smaller; scheduled imports and metadata enrichment run automatically.
 
 ## 5. Deploy
 
@@ -92,7 +102,9 @@ The Cron Trigger in `wrangler.toml` runs once per hour:
 crons = ["0 * * * *"]
 ```
 
-It fetches YouTube's public feed and upserts the latest video metadata into D1.
+On its first run after `YOUTUBE_API_KEY` is configured, it imports the complete
+uploads playlist. After that, it fetches YouTube's public feed and upserts the
+latest video metadata into D1.
 
 ## 6. Connect your domain
 
@@ -145,6 +157,10 @@ automatically included when they match topics such as:
 Each video page also receives topic links and automatically selected related
 videos. The topic pages and video pages are included in the generated sitemap.
 
+The homepage cards are also rendered by the Worker from D1 before the browser
+JavaScript runs. This gives search engines readable internal links, titles,
+dates, and descriptions while preserving the fast client-side featured player.
+
 ## Important notes
 
 - The YouTube channel feed returns the most recent feed entries. For a large
@@ -153,3 +169,7 @@ videos. The topic pages and video pages are included in the generated sitemap.
 - The public page route is cacheable for one hour. A new video may take up to
   one hour to sync, plus normal crawler discovery time.
 - Do not commit Cloudflare API tokens or other secrets to the repository.
+- Cloudflare Web Analytics is enabled from the Cloudflare dashboard rather than
+  from this repository: open the site in **Web Analytics**, add the hostname,
+  and copy the provided beacon snippet into the page if you want traffic and
+  Core Web Vitals reporting.

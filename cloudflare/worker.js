@@ -26,13 +26,36 @@ const TOPICS = [
     keywords: ["travel guide", "things to do", "guide", "travel", "tourist", "explore", "cultural"],
   },
 ];
+const DESTINATIONS = [
+  { slug: "udon-thani", name: "Udon Thani", keywords: ["udon thani"] },
+  { slug: "bangkok", name: "Bangkok", keywords: ["bangkok"] },
+  { slug: "thailand", name: "Thailand", keywords: ["thailand", "thai"] },
+  { slug: "vietnam", name: "Vietnam", keywords: ["vietnam", "vietnamese"] },
+  { slug: "cambodia", name: "Cambodia", keywords: ["cambodia", "cambodian"] },
+  { slug: "laos", name: "Laos", keywords: ["laos", "lao"] },
+  { slug: "malaysia", name: "Malaysia", keywords: ["malaysia", "malaysian"] },
+  { slug: "singapore", name: "Singapore", keywords: ["singapore"] },
+  { slug: "indonesia", name: "Indonesia", keywords: ["indonesia", "indonesian"] },
+  { slug: "philippines", name: "Philippines", keywords: ["philippines", "filipino"] },
+  { slug: "japan", name: "Japan", keywords: ["japan", "japanese"] },
+  { slug: "south-korea", name: "South Korea", keywords: ["south korea", "korea"] },
+  { slug: "united-states", name: "United States", keywords: ["united states", "usa", "america"] },
+];
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname === "/" || url.pathname === "/index.html") {
+      return homepageResponse(env, request);
+    }
+
     if (url.pathname === "/sitemap.xml") {
       return sitemapResponse(env);
+    }
+
+    if (url.pathname === "/feed.xml") {
+      return feedResponse(env);
     }
 
     if (url.pathname === "/api/videos") {
@@ -43,13 +66,12 @@ export default {
       return topicIndexResponse(env);
     }
 
-    if (url.pathname === "/api/sync" && request.method === "POST") {
-      if (!env.SYNC_TOKEN || request.headers.get("Authorization") !== `Bearer ${env.SYNC_TOKEN}`) {
-        return json({ error: "Unauthorized" }, 401);
-      }
+    if (url.pathname === "/destinations" || url.pathname === "/destinations/") {
+      return destinationIndexResponse(env);
+    }
 
-      const count = await syncVideos(env);
-      return json({ ok: true, synced: count });
+    if (url.pathname === "/videos" || url.pathname === "/videos/") {
+      return archiveResponse(env, url);
     }
 
     if (url.pathname.startsWith("/videos/")) {
@@ -60,15 +82,34 @@ export default {
       return topicPageResponse(env, url.pathname);
     }
 
+    if (url.pathname.startsWith("/destinations/")) {
+      return destinationPageResponse(env, url.pathname);
+    }
+
     return env.ASSETS.fetch(request);
   },
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(syncVideos(env));
+    ctx.waitUntil(runScheduledSync(env));
   },
 };
 
-async function syncVideos(env) {
+async function runScheduledSync(env) {
+  if (env.YOUTUBE_API_KEY) {
+    const fullImport = await env.DB.prepare("SELECT value FROM sync_state WHERE key = 'full_import_complete' LIMIT 1").first();
+    if (!fullImport) {
+      const synced = await syncVideosFromApi(env);
+      await markFullImportComplete(env, synced);
+      return synced;
+    }
+    const enriched = await enrichDurationsBatch(env);
+    if (enriched) return enriched;
+  }
+
+  return syncVideosFromFeed(env);
+}
+
+async function syncVideosFromFeed(env) {
   const channelId = env.YOUTUBE_CHANNEL_ID || DEFAULT_CHANNEL_ID;
   const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
   const response = await fetch(feedUrl, {
@@ -132,13 +173,146 @@ async function syncVideos(env) {
   return synced;
 }
 
+async function syncVideosFromApi(env) {
+  const channelId = env.YOUTUBE_CHANNEL_ID || DEFAULT_CHANNEL_ID;
+  const uploadsPlaylistId = `UU${channelId.slice(2)}`;
+  let pageToken = "";
+  let synced = 0;
+  let statements = [];
+
+  do {
+    const apiUrl = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
+    apiUrl.searchParams.set("key", env.YOUTUBE_API_KEY);
+    apiUrl.searchParams.set("playlistId", uploadsPlaylistId);
+    apiUrl.searchParams.set("part", "snippet");
+    apiUrl.searchParams.set("maxResults", "50");
+    if (pageToken) apiUrl.searchParams.set("pageToken", pageToken);
+
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`YouTube API returned ${response.status}: ${truncate(errorBody, 600)}`);
+    }
+    const data = await response.json();
+
+    for (const item of data.items || []) {
+      const snippet = item.snippet || {};
+      const videoId = snippet.resourceId?.videoId;
+      if (!videoId || !snippet.title) continue;
+
+      statements.push(upsertVideoStatement(env, {
+        videoId,
+        title: snippet.title,
+        description: snippet.description || "Watch the latest travel and food video from Jason Michael Phillips.",
+        publishedAt: snippet.publishedAt || new Date().toISOString(),
+        thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      }));
+      synced += 1;
+
+      if (statements.length === 50) {
+        await env.DB.batch(statements);
+        statements = [];
+      }
+    }
+
+    pageToken = data.nextPageToken || "";
+  } while (pageToken);
+
+  if (statements.length) await env.DB.batch(statements);
+  return synced;
+}
+
+async function upsertVideo(env, { videoId, title, description, publishedAt, thumbnailUrl }) {
+  await upsertVideoStatement(env, { videoId, title, description, publishedAt, thumbnailUrl }).run();
+}
+
+function upsertVideoStatement(env, { videoId, title, description, publishedAt, thumbnailUrl, durationSeconds = null }) {
+  const slug = `${slugify(title)}-${videoId.toLowerCase()}`;
+  return env.DB.prepare(`
+    INSERT INTO videos (id, slug, title, description, thumbnail_url, published_at, duration_seconds, youtube_url, embed_url, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      slug = excluded.slug,
+      title = excluded.title,
+      description = excluded.description,
+      thumbnail_url = excluded.thumbnail_url,
+      published_at = excluded.published_at,
+      duration_seconds = COALESCE(excluded.duration_seconds, videos.duration_seconds),
+      youtube_url = excluded.youtube_url,
+      embed_url = excluded.embed_url,
+      updated_at = CASE
+        WHEN videos.title <> excluded.title
+          OR videos.description <> excluded.description
+          OR videos.thumbnail_url <> excluded.thumbnail_url
+          OR videos.published_at <> excluded.published_at
+        THEN excluded.updated_at
+        ELSE videos.updated_at
+      END
+  `).bind(
+    videoId,
+    slug,
+    title,
+    description,
+    thumbnailUrl,
+    publishedAt,
+    durationSeconds,
+    `https://www.youtube.com/watch?v=${videoId}`,
+    `https://www.youtube.com/embed/${videoId}`,
+    new Date().toISOString(),
+  );
+}
+
+async function getVideoDetails(env, videoIds) {
+  const details = new Map();
+  if (!videoIds.length) return details;
+  const apiUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+  apiUrl.searchParams.set("key", env.YOUTUBE_API_KEY);
+  apiUrl.searchParams.set("part", "contentDetails");
+  videoIds.forEach((videoId) => apiUrl.searchParams.append("id", videoId));
+  const response = await fetch(apiUrl);
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`YouTube details API returned ${response.status}: ${truncate(errorBody, 600)}`);
+  }
+  const data = await response.json();
+  for (const item of data.items || []) {
+    const seconds = parseDuration(item.contentDetails?.duration);
+    if (seconds !== null) details.set(item.id, seconds);
+  }
+  return details;
+}
+
+async function enrichDurationsBatch(env) {
+  const result = await env.DB.prepare("SELECT id FROM videos WHERE duration_seconds IS NULL ORDER BY published_at DESC LIMIT 50").all();
+  const videoIds = (result.results || []).map((video) => video.id);
+  if (!videoIds.length) return 0;
+
+  const details = await getVideoDetails(env, videoIds);
+  const updates = [...details.entries()].map(([videoId, seconds]) => env.DB.prepare("UPDATE videos SET duration_seconds = ? WHERE id = ?").bind(seconds, videoId));
+  if (updates.length) await env.DB.batch(updates);
+  return updates.length;
+}
+
+async function markFullImportComplete(env, count) {
+  await env.DB.prepare("INSERT INTO sync_state (key, value, updated_at) VALUES ('full_import_complete', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
+    .bind(String(count), new Date().toISOString())
+    .run();
+}
+
 async function videoPageResponse(env, pathname) {
   const slug = decodeURIComponent(pathname.replace(/^\/videos\//, "").replace(/\/$/, ""));
 
   if (!slug) return new Response("Not found", { status: 404 });
 
   const video = await env.DB.prepare("SELECT * FROM videos WHERE slug = ? LIMIT 1").bind(slug).first();
-  if (!video) return notFoundResponse();
+  if (!video) {
+    const videoId = slug.slice(-11);
+    const current = await env.DB.prepare("SELECT slug FROM videos WHERE lower(id) = ? LIMIT 1").bind(videoId.toLowerCase()).first();
+    if (current?.slug && current.slug !== slug) {
+      return Response.redirect(`${SITE_URL}/videos/${encodeURIComponent(current.slug)}/`, 308);
+    }
+    return notFoundResponse();
+  }
 
   const related = await getRelatedVideos(env, video);
   const html = renderVideoPage(video, related);
@@ -161,6 +335,20 @@ async function apiVideosResponse(env) {
   return json({ items: result.results || [] });
 }
 
+async function homepageResponse(env, request) {
+  const videos = await getAllVideos(env);
+  const assetResponse = await env.ASSETS.fetch(request);
+  if (!videos.length || !assetResponse.ok) return assetResponse;
+
+  return new HTMLRewriter()
+    .on("#video-grid", {
+      element(element) {
+        element.setInnerContent(videos.slice(1, 25).map(homepageCard).join(""), { html: true });
+      },
+    })
+    .transform(assetResponse);
+}
+
 async function topicIndexResponse(env) {
   const videos = await getAllVideos(env);
   const activeTopics = TOPICS.filter((topic) => videos.some((video) => matchesTopic(video, topic)));
@@ -177,12 +365,41 @@ async function topicPageResponse(env, pathname) {
   return htmlResponse(renderTopicPage(topic, videos));
 }
 
+async function destinationIndexResponse(env) {
+  const videos = await getAllVideos(env);
+  const active = DESTINATIONS
+    .map((destination) => ({ destination, videos: videos.filter((video) => matchesDestination(video, destination)) }))
+    .filter((item) => item.videos.length >= 3);
+  return htmlResponse(renderDestinationIndex(active));
+}
+
+async function destinationPageResponse(env, pathname) {
+  const slug = decodeURIComponent(pathname.replace(/^\/destinations\//, "").replace(/\/$/, ""));
+  const destination = DESTINATIONS.find((item) => item.slug === slug);
+  if (!destination) return notFoundResponse();
+  const videos = (await getAllVideos(env)).filter((video) => matchesDestination(video, destination));
+  if (videos.length < 3) return notFoundResponse();
+  return htmlResponse(renderDestinationPage(destination, videos));
+}
+
+async function archiveResponse(env, url) {
+  const query = url.searchParams.get("q")?.trim() || "";
+  const page = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
+  const pageSize = 36;
+  const offset = (page - 1) * pageSize;
+  const pattern = `%${query.replace(/[%_]/g, "\\$&")}%`;
+  const where = query ? "WHERE title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\'" : "";
+  const bindings = query ? [pattern, pattern, pageSize, offset] : [pageSize, offset];
+  const result = await env.DB.prepare(`SELECT id, slug, title, description, thumbnail_url, published_at FROM videos ${where} ORDER BY published_at DESC LIMIT ? OFFSET ?`).bind(...bindings).all();
+  const countResult = await env.DB.prepare(`SELECT COUNT(*) AS total FROM videos ${where}`).bind(...(query ? [pattern, pattern] : [])).first();
+  return htmlResponse(renderArchivePage(result.results || [], Number(countResult?.total || 0), query, page, pageSize));
+}
+
 async function getAllVideos(env) {
   const result = await env.DB.prepare(`
-    SELECT id, slug, title, description, thumbnail_url, published_at, youtube_url, embed_url
+    SELECT id, slug, title, description, thumbnail_url, published_at, duration_seconds, updated_at, youtube_url, embed_url
     FROM videos
     ORDER BY published_at DESC
-    LIMIT 100
   `).all();
   return result.results || [];
 }
@@ -203,13 +420,23 @@ function matchesTopic(video, topic) {
   return topic.keywords.some((keyword) => content.includes(keyword));
 }
 
+function matchesDestination(video, destination) {
+  const content = `${video.title} ${video.description}`.toLowerCase();
+  return destination.keywords.some((keyword) => content.includes(keyword));
+}
+
 async function sitemapResponse(env) {
   const videos = await getAllVideos(env);
   const activeTopics = TOPICS.filter((topic) => videos.some((video) => matchesTopic(video, topic)));
+  const activeDestinations = DESTINATIONS.filter((destination) => videos.filter((video) => matchesDestination(video, destination)).length >= 3);
+  const latestModified = videos[0] ? new Date(videos[0].updated_at || videos[0].published_at).toISOString() : new Date().toISOString();
   const urls = [
-    `<url><loc>${SITE_URL}/</loc></url>`,
-    `<url><loc>${SITE_URL}/topics/</loc></url>`,
-    ...activeTopics.map((topic) => `<url><loc>${SITE_URL}/topics/${topic.slug}/</loc></url>`),
+    `<url><loc>${SITE_URL}/</loc><lastmod>${latestModified}</lastmod></url>`,
+    `<url><loc>${SITE_URL}/videos/</loc><lastmod>${latestModified}</lastmod></url>`,
+    `<url><loc>${SITE_URL}/topics/</loc><lastmod>${latestModified}</lastmod></url>`,
+    `<url><loc>${SITE_URL}/destinations/</loc><lastmod>${latestModified}</lastmod></url>`,
+    ...activeTopics.map((topic) => `<url><loc>${SITE_URL}/topics/${topic.slug}/</loc><lastmod>${latestModified}</lastmod></url>`),
+    ...activeDestinations.map((destination) => `<url><loc>${SITE_URL}/destinations/${destination.slug}/</loc><lastmod>${latestModified}</lastmod></url>`),
     ...videos.map((video) => videoSitemapEntry(video)),
   ];
 
@@ -221,17 +448,26 @@ async function sitemapResponse(env) {
   });
 }
 
+async function feedResponse(env) {
+  const videos = (await getAllVideos(env)).slice(0, 50);
+  const entries = videos.map((video) => `<entry><title>${escapeXml(video.title)}</title><link href="${SITE_URL}/videos/${encodeURIComponent(video.slug)}/"/><id>${escapeXml(video.youtube_url)}</id><updated>${new Date(video.updated_at || video.published_at).toISOString()}</updated><summary type="html">${escapeXml(truncate(stripHtml(video.description), 500))}</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="${escapeXml(video.thumbnail_url)}"/></entry>`).join("");
+  return new Response(`<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Jason Michael Phillips — Latest Videos</title><link href="${SITE_URL}/feed.xml" rel="self"/><link href="${SITE_URL}/"/><id>${SITE_URL}/</id><updated>${new Date().toISOString()}</updated>${entries}</feed>`, {
+    headers: { "content-type": "application/atom+xml; charset=UTF-8", "cache-control": "public, max-age=300, s-maxage=3600" },
+  });
+}
+
 function videoSitemapEntry(video) {
   const title = escapeXml(video.title);
   const description = escapeXml(truncate(stripHtml(video.description), 2048));
   return [
     "<url>",
     `<loc>${SITE_URL}/videos/${encodeURIComponent(video.slug)}/</loc>`,
-    `<lastmod>${new Date(video.published_at).toISOString()}</lastmod>`,
+    `<lastmod>${new Date(video.updated_at || video.published_at).toISOString()}</lastmod>`,
     "<video:video>",
     `<video:thumbnail_loc>${escapeXml(video.thumbnail_url)}</video:thumbnail_loc>`,
     `<video:title>${title}</video:title>`,
     `<video:description>${description}</video:description>`,
+    ...(video.duration_seconds ? [`<video:duration>${video.duration_seconds}</video:duration>`] : []),
     `<video:player_loc allow_embed="yes">${escapeXml(video.embed_url)}</video:player_loc>`,
     `<video:publication_date>${new Date(video.published_at).toISOString()}</video:publication_date>`,
     "</video:video>",
@@ -244,6 +480,7 @@ function renderVideoPage(video, related) {
   const description = truncate(stripHtml(video.description), 160);
   const publishedDate = new Date(video.published_at).toISOString();
   const matchingTopics = TOPICS.filter((topic) => matchesTopic(video, topic));
+  const matchingDestinations = DESTINATIONS.filter((destination) => matchesDestination(video, destination));
   const schema = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
@@ -251,6 +488,7 @@ function renderVideoPage(video, related) {
     description,
     thumbnailUrl: [video.thumbnail_url],
     uploadDate: publishedDate,
+    ...(video.duration_seconds ? { duration: isoDuration(video.duration_seconds) } : {}),
     embedUrl: video.embed_url,
     contentUrl: video.youtube_url,
     mainEntityOfPage: canonical,
@@ -264,6 +502,16 @@ function renderVideoPage(video, related) {
       name: "Jason Michael Phillips",
       url: SITE_URL,
     },
+  };
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "All Videos", item: `${SITE_URL}/videos/` },
+      ...(matchingDestinations.length ? [{ "@type": "ListItem", position: 3, name: matchingDestinations[0].name, item: `${SITE_URL}/destinations/${matchingDestinations[0].slug}/` }] : []),
+      { "@type": "ListItem", position: matchingDestinations.length ? 4 : 3, name: video.title, item: canonical },
+    ],
   };
 
   return `<!doctype html>
@@ -285,14 +533,16 @@ function renderVideoPage(video, related) {
   <meta name="twitter:image" content="${escapeHtml(video.thumbnail_url)}">
   <link rel="stylesheet" href="/style.css">
   <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>
+  <script type="application/ld+json">${JSON.stringify(breadcrumbs).replace(/</g, "\\u003c")}</script>
 </head>
 <body class="video-page">
   <header class="site-header">
     <a class="site-logo" href="/">Jason Michael Phillips</a>
-    <a class="back-link" href="/">All videos</a>
+    <a class="back-link" href="/videos/">All videos</a>
   </header>
   <main class="video-detail">
     <article>
+      <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">›</span><a href="/videos/">All Videos</a>${matchingDestinations.length ? `<span aria-hidden="true">›</span><a href="/destinations/${matchingDestinations[0].slug}/">${escapeHtml(matchingDestinations[0].name)}</a>` : ""}<span aria-hidden="true">›</span><span>${escapeHtml(video.title)}</span></nav>
       <div class="video-embed">
         <iframe src="${escapeHtml(video.embed_url)}?rel=0" title="${escapeHtml(video.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
       </div>
@@ -300,6 +550,7 @@ function renderVideoPage(video, related) {
       <h1>${escapeHtml(video.title)}</h1>
       <p class="published">Published ${new Date(video.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</p>
       ${matchingTopics.length ? `<nav class="topic-tags" aria-label="Video topics">${matchingTopics.map((topic) => `<a href="/topics/${topic.slug}/">${escapeHtml(topic.name)}</a>`).join("")}</nav>` : ""}
+      ${matchingDestinations.length ? `<nav class="topic-tags destination-tags" aria-label="Video destinations">${matchingDestinations.map((destination) => `<a href="/destinations/${destination.slug}/">${escapeHtml(destination.name)}</a>`).join("")}</nav>` : ""}
       <div class="video-description">${paragraphs(video.description)}</div>
       <a class="watch-link" href="${escapeHtml(video.youtube_url)}" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a>
       ${relatedSection(related)}
@@ -329,13 +580,53 @@ function renderTopicPage(topic, videos) {
   });
 }
 
+function renderDestinationIndex(items) {
+  const cards = items.map(({ destination, videos }) => `<a class="topic-card" href="/destinations/${destination.slug}/"><h2>${escapeHtml(destination.name)}</h2><p>Travel videos, food discoveries, hotels, and experiences from ${escapeHtml(destination.name)}.</p><span>${videos.length} videos ↗</span></a>`).join("");
+  return pageShell({
+    title: "Travel Destinations | Jason Michael Phillips",
+    description: "Browse Jason Michael Phillips travel videos by destination.",
+    canonical: `${SITE_URL}/destinations/`,
+    body: `<header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/videos/">All videos</a></header><main class="topic-detail"><p class="eyebrow">Explore the library</p><h1>Browse destinations</h1><p class="topic-intro">Explore travel stories, food, hotel reviews, and walking tours organized by destination.</p><div class="topic-grid">${cards}</div></main>`,
+  });
+}
+
+function renderDestinationPage(destination, videos) {
+  const cards = videos.map((video) => videoCard(video)).join("");
+  return pageShell({
+    title: `${destination.name} Travel Videos | Jason Michael Phillips`,
+    description: `Explore travel, food, hotel, and walking tour videos from ${destination.name} by Jason Michael Phillips.`,
+    canonical: `${SITE_URL}/destinations/${destination.slug}/`,
+    body: `<header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/destinations/">All destinations</a></header><main class="topic-detail"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">›</span><a href="/destinations/">Destinations</a><span aria-hidden="true">›</span><span>${escapeHtml(destination.name)}</span></nav><p class="eyebrow">Automatically curated destination</p><h1>${escapeHtml(destination.name)} Travel Videos</h1><p class="topic-intro">Explore ${escapeHtml(destination.name)} through travel stories, local food, hotel reviews, and walking tours.</p><div class="related-grid">${cards}</div></main>`,
+  });
+}
+
+function renderArchivePage(videos, total, query, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const cards = videos.map((video) => videoCard(video)).join("");
+  const params = query ? `&q=${encodeURIComponent(query)}` : "";
+  const pagination = `<nav class="pagination" aria-label="Archive pages">${page > 1 ? `<a href="/videos/?page=${page - 1}${params}">← Previous</a>` : ""}<span>Page ${page} of ${totalPages}</span>${page < totalPages ? `<a href="/videos/?page=${page + 1}${params}">Next →</a>` : ""}</nav>`;
+  return pageShell({
+    title: query ? `Search: ${query} | Jason Michael Phillips` : "All Travel Videos | Jason Michael Phillips",
+    description: "Search and browse the complete travel, food, hotel review, and walking tour video archive by Jason Michael Phillips.",
+    canonical: `${SITE_URL}/videos/`,
+    body: `<header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/topics/">Browse topics</a></header><main class="topic-detail archive-page"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">›</span><span>All Videos</span></nav><p class="eyebrow">The complete library</p><h1>All Videos</h1><p class="topic-intro">Search ${total.toLocaleString()} travel, food, hotel, and walking tour videos.</p><form class="archive-search" method="get" action="/videos/"><label for="video-search">Search the video archive</label><div><input id="video-search" name="q" value="${escapeHtml(query)}" placeholder="Try hotel, Bangkok, burger…"><button type="submit">Search</button></div></form><div class="related-grid">${cards || `<p>No videos matched that search.</p>`}</div>${pagination}</main>`,
+  });
+}
+
 function relatedSection(videos) {
   if (!videos.length) return "";
   return `<section class="related-section"><h2>More videos</h2><div class="related-grid">${videos.map((video) => videoCard(video)).join("")}</div></section>`;
 }
 
 function videoCard(video) {
-  return `<a class="related-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" loading="lazy"><span>${escapeHtml(video.title)}</span></a>`;
+  const date = new Date(video.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  return `<a class="related-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" width="640" height="360" loading="lazy"><span>${escapeHtml(video.title)}</span><small>${escapeHtml(date)}</small></a>`;
+}
+
+function homepageCard(video) {
+  const date = new Date(video.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  const description = truncate(stripHtml(video.description), 120);
+  return `<a class="video-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" width="640" height="360" loading="lazy"><div class="video-info"><h3>${escapeHtml(video.title)}</h3><p>${escapeHtml(date)}</p><p>${escapeHtml(description)}</p></div></a>`;
 }
 
 function pageShell({ title, description, canonical, body }) {
@@ -368,7 +659,17 @@ function htmlResponse(html, status = 200) {
 }
 
 function paragraphs(value) {
-  return stripHtml(value).split(/\n+/).filter(Boolean).map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+  return stripHtml(value).split(/\n+/).filter(Boolean).map((line) => `<p>${linkify(line)}</p>`).join("");
+}
+
+function linkify(value) {
+  const escaped = escapeHtml(value);
+  return escaped.replace(/https?:\/\/[^\s<]+/g, (url) => {
+    const trailingMatch = url.match(/[),.;!?]+$/);
+    const trailing = trailingMatch ? trailingMatch[0] : "";
+    const cleanUrl = trailing ? url.slice(0, -trailing.length) : url;
+    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${trailing}`;
+  });
 }
 
 function textFromXml(xml, tag) {
@@ -386,6 +687,20 @@ function stripHtml(value) {
 
 function truncate(value, length) {
   return value.length <= length ? value : `${value.slice(0, length - 1).trim()}…`;
+}
+
+function parseDuration(value) {
+  if (!value) return null;
+  const match = value.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) return null;
+  return Number(match[1] || 0) * 3600 + Number(match[2] || 0) * 60 + Number(match[3] || 0);
+}
+
+function isoDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${remaining || (!hours && !minutes) ? `${remaining}S` : ""}`;
 }
 
 function decodeXml(value) {
@@ -408,8 +723,8 @@ function json(value, status = 200) {
 }
 
 function notFoundResponse() {
-  return new Response("<!doctype html><title>Video not found</title><h1>Video not found</h1><p><a href=\"/\">Return home</a></p>", {
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found | Jason Michael Phillips</title><meta name="robots" content="noindex"><link rel="stylesheet" href="/style.css"></head><body class="video-page"><header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/topics/">Browse topics</a></header><main class="topic-detail"><p class="eyebrow">Nothing to see here</p><h1>That page could not be found.</h1><p class="topic-intro">Try the latest videos or browse the automatically curated topics.</p><p><a class="watch-link" href="/">Return to the homepage ↗</a></p></main></body></html>`, {
     status: 404,
-    headers: { "content-type": "text/html; charset=UTF-8" },
+    headers: { "content-type": "text/html; charset=UTF-8", "cache-control": "public, max-age=300" },
   });
 }
