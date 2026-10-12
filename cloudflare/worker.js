@@ -54,6 +54,10 @@ export default {
       return sitemapResponse(env);
     }
 
+    if (url.pathname === "/robots.txt") {
+      return robotsResponse();
+    }
+
     if (url.pathname === "/feed.xml") {
       return feedResponse(env);
     }
@@ -107,6 +111,19 @@ async function runScheduledSync(env) {
   }
 
   return syncVideosFromFeed(env);
+}
+
+function robotsResponse() {
+  return new Response(`User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`, {
+    headers: {
+      "content-type": "text/plain; charset=UTF-8",
+      "cache-control": "public, max-age=3600",
+    },
+  });
 }
 
 async function syncVideosFromFeed(env) {
