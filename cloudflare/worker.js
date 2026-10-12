@@ -386,7 +386,7 @@ async function homepageResponse(env, request) {
     })
     .on("#video-grid", {
       element(element) {
-        element.setInnerContent(videos.slice(1, 13).map(homepageCard).join(""), { html: true });
+        element.setInnerContent(videos.slice(1, 9).map(homepageCard).join(""), { html: true });
       },
     })
     .transform(assetResponse);
@@ -674,7 +674,12 @@ function videoCard(video) {
 function homepageCard(video) {
   const date = new Date(video.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
   const description = truncate(stripHtml(video.description), 120);
-  return `<a class="video-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" width="640" height="360" loading="lazy"><div class="video-info"><h3>${escapeHtml(video.title)}</h3><p>${escapeHtml(date)}</p><p>${escapeHtml(description)}</p></div></a>`;
+  const thumbnail = homepageThumbnail(video.thumbnail_url);
+  return `<a class="video-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(video.title)}" width="320" height="180" loading="lazy" decoding="async"><div class="video-info"><h3>${escapeHtml(video.title)}</h3><p>${escapeHtml(date)}</p><p>${escapeHtml(description)}</p></div></a>`;
+}
+
+function homepageThumbnail(url) {
+  return url.replace(/\/hqdefault\.jpg$/i, "/mqdefault.jpg");
 }
 
 function featuredMarkup(video) {
