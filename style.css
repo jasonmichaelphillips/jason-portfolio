@@ -56,7 +56,7 @@ nav .logo {
 }
 
 nav .logo:hover {
-    color: var(--accent-color);
+    color: #ff7a82;
 }
 
 nav, .nav-content {
@@ -79,7 +79,7 @@ nav a {
 }
 
 nav a:hover {
-    color: var(--accent-color);
+    color: #ff7a82;
 }
 
 /* Banner styles */
@@ -119,7 +119,9 @@ main {
 .featured-player-container {
   position: relative;
   width: 100%;
-  height: 80vh;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  max-height: 680px;
   margin-top: 0;
   overflow: hidden;
 }
@@ -128,6 +130,59 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.featured-poster {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.featured-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .35s ease, filter .35s ease;
+}
+
+.featured-poster:hover img,
+.featured-poster:focus-visible img {
+  transform: scale(1.02);
+  filter: brightness(.72);
+}
+
+.featured-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #e50914;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  font-size: 1.35rem;
+  transform: translate(-50%, -50%);
+}
+
+.featured-label {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  font-size: .9rem;
+  font-weight: 700;
+  text-shadow: 0 1px 5px #000;
 }
 
 /* Add gradient overlay */
@@ -365,7 +420,7 @@ footer {
 
 .contact-kicker {
   margin: 1rem 0 .35rem;
-  color: #e50914;
+  color: #ff7a82;
   font-size: .72rem;
   font-weight: 700;
   letter-spacing: .12em;
@@ -687,11 +742,10 @@ footer {
 
 @media (max-width: 600px) {
   .featured-player-container {
-    min-height: 180px;
     margin-top: 56px;
   }
   #featured-video-player {
-    min-height: 180px;
+    min-height: 0;
   }
   #video-grid {
     grid-template-columns: 1fr;
@@ -754,7 +808,7 @@ footer {
 .logo {
   font-size: 2.2rem;
   font-weight: bold;
-  color: #e50914;
+  color: #ff7a82;
   letter-spacing: 2px;
   margin-right: 40px;
   text-decoration: none;
@@ -772,7 +826,7 @@ footer {
 
 .nav-links a:hover {
   opacity: 1;
-  color: #e50914;
+  color: #ff7a82;
 }
 
 .profile {
@@ -808,7 +862,7 @@ footer {
 }
 
 .site-logo {
-  color: #e50914;
+  color: #ff7a82;
   font-size: 1.15rem;
   font-weight: 700;
 }
@@ -849,7 +903,7 @@ footer {
 
 .eyebrow {
   margin: 2rem 0 .5rem;
-  color: #e50914;
+  color: #ff7a82;
   font-size: .8rem;
   font-weight: 700;
   letter-spacing: .12em;

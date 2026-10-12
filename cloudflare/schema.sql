@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS videos (
   thumbnail_url TEXT NOT NULL,
   published_at TEXT NOT NULL,
   duration_seconds INTEGER,
+  location_description TEXT,
+  location_checked INTEGER NOT NULL DEFAULT 0,
   youtube_url TEXT NOT NULL,
   embed_url TEXT NOT NULL,
   updated_at TEXT NOT NULL

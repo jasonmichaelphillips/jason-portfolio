@@ -39,7 +39,7 @@ const DESTINATIONS = [
   { slug: "philippines", name: "Philippines", keywords: ["philippines", "filipino"] },
   { slug: "japan", name: "Japan", keywords: ["japan", "japanese"] },
   { slug: "south-korea", name: "South Korea", keywords: ["south korea", "korea"] },
-  { slug: "united-states", name: "United States", keywords: ["united states", "usa", "america"] },
+  { slug: "united-states", name: "United States", keywords: ["united states", "florida", "pensacola", "new orleans", "lake charles", "gulf coast", "kansas city", "sebring"] },
 ];
 
 export default {
@@ -106,7 +106,7 @@ async function runScheduledSync(env) {
       await markFullImportComplete(env, synced);
       return synced;
     }
-    const enriched = await enrichDurationsBatch(env);
+    const enriched = await enrichVideoMetadataBatch(env);
     if (enriched) return enriched;
   }
 
@@ -239,15 +239,15 @@ async function syncVideosFromApi(env) {
   return synced;
 }
 
-async function upsertVideo(env, { videoId, title, description, publishedAt, thumbnailUrl }) {
-  await upsertVideoStatement(env, { videoId, title, description, publishedAt, thumbnailUrl }).run();
+async function upsertVideo(env, { videoId, title, description, publishedAt, thumbnailUrl, locationDescription = null }) {
+  await upsertVideoStatement(env, { videoId, title, description, publishedAt, thumbnailUrl, locationDescription }).run();
 }
 
-function upsertVideoStatement(env, { videoId, title, description, publishedAt, thumbnailUrl, durationSeconds = null }) {
+function upsertVideoStatement(env, { videoId, title, description, publishedAt, thumbnailUrl, durationSeconds = null, locationDescription = null }) {
   const slug = `${slugify(title)}-${videoId.toLowerCase()}`;
   return env.DB.prepare(`
-    INSERT INTO videos (id, slug, title, description, thumbnail_url, published_at, duration_seconds, youtube_url, embed_url, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO videos (id, slug, title, description, thumbnail_url, published_at, duration_seconds, location_description, location_checked, youtube_url, embed_url, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       slug = excluded.slug,
       title = excluded.title,
@@ -255,6 +255,7 @@ function upsertVideoStatement(env, { videoId, title, description, publishedAt, t
       thumbnail_url = excluded.thumbnail_url,
       published_at = excluded.published_at,
       duration_seconds = COALESCE(excluded.duration_seconds, videos.duration_seconds),
+      location_description = COALESCE(excluded.location_description, videos.location_description),
       youtube_url = excluded.youtube_url,
       embed_url = excluded.embed_url,
       updated_at = CASE
@@ -273,6 +274,8 @@ function upsertVideoStatement(env, { videoId, title, description, publishedAt, t
     thumbnailUrl,
     publishedAt,
     durationSeconds,
+    locationDescription,
+    0,
     `https://www.youtube.com/watch?v=${videoId}`,
     `https://www.youtube.com/embed/${videoId}`,
     new Date().toISOString(),
@@ -284,7 +287,7 @@ async function getVideoDetails(env, videoIds) {
   if (!videoIds.length) return details;
   const apiUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
   apiUrl.searchParams.set("key", env.YOUTUBE_API_KEY);
-  apiUrl.searchParams.set("part", "contentDetails");
+  apiUrl.searchParams.set("part", "contentDetails,recordingDetails");
   videoIds.forEach((videoId) => apiUrl.searchParams.append("id", videoId));
   const response = await fetch(apiUrl);
   if (!response.ok) {
@@ -294,18 +297,36 @@ async function getVideoDetails(env, videoIds) {
   const data = await response.json();
   for (const item of data.items || []) {
     const seconds = parseDuration(item.contentDetails?.duration);
-    if (seconds !== null) details.set(item.id, seconds);
+    details.set(item.id, {
+      durationSeconds: seconds,
+      locationDescription: item.recordingDetails?.locationDescription?.trim() || null,
+    });
   }
   return details;
 }
 
-async function enrichDurationsBatch(env) {
-  const result = await env.DB.prepare("SELECT id FROM videos WHERE duration_seconds IS NULL ORDER BY published_at DESC LIMIT 50").all();
+async function enrichVideoMetadataBatch(env) {
+  const result = await env.DB.prepare("SELECT id FROM videos WHERE duration_seconds IS NULL OR location_checked = 0 ORDER BY published_at DESC LIMIT 50").all();
   const videoIds = (result.results || []).map((video) => video.id);
   if (!videoIds.length) return 0;
 
   const details = await getVideoDetails(env, videoIds);
-  const updates = [...details.entries()].map(([videoId, seconds]) => env.DB.prepare("UPDATE videos SET duration_seconds = ? WHERE id = ?").bind(seconds, videoId));
+  const now = new Date().toISOString();
+  const updates = videoIds.map((videoId) => {
+    const metadata = details.get(videoId) || { durationSeconds: null, locationDescription: null };
+    return env.DB.prepare(`
+      UPDATE videos
+      SET duration_seconds = COALESCE(?, duration_seconds),
+          location_description = COALESCE(?, location_description),
+          location_checked = 1,
+          updated_at = CASE
+            WHEN COALESCE(location_description, '') <> COALESCE(?, '')
+            THEN ?
+            ELSE updated_at
+          END
+      WHERE id = ?
+    `).bind(metadata.durationSeconds, metadata.locationDescription, metadata.locationDescription, now, videoId);
+  });
   if (updates.length) await env.DB.batch(updates);
   return updates.length;
 }
@@ -358,9 +379,14 @@ async function homepageResponse(env, request) {
   if (!videos.length || !assetResponse.ok) return assetResponse;
 
   return new HTMLRewriter()
+    .on("#featured-video-player", {
+      element(element) {
+        if (videos[0]) element.setInnerContent(featuredMarkup(videos[0]), { html: true });
+      },
+    })
     .on("#video-grid", {
       element(element) {
-        element.setInnerContent(videos.slice(1, 25).map(homepageCard).join(""), { html: true });
+        element.setInnerContent(videos.slice(1, 13).map(homepageCard).join(""), { html: true });
       },
     })
     .transform(assetResponse);
@@ -414,7 +440,7 @@ async function archiveResponse(env, url) {
 
 async function getAllVideos(env) {
   const result = await env.DB.prepare(`
-    SELECT id, slug, title, description, thumbnail_url, published_at, duration_seconds, updated_at, youtube_url, embed_url
+    SELECT id, slug, title, description, thumbnail_url, published_at, duration_seconds, location_description, updated_at, youtube_url, embed_url
     FROM videos
     ORDER BY published_at DESC
   `).all();
@@ -434,12 +460,17 @@ async function getRelatedVideos(env, video) {
 
 function matchesTopic(video, topic) {
   const content = `${video.title} ${video.description}`.toLowerCase();
-  return topic.keywords.some((keyword) => content.includes(keyword));
+  return topic.keywords.some((keyword) => containsKeyword(content, keyword));
 }
 
 function matchesDestination(video, destination) {
-  const content = `${video.title} ${video.description}`.toLowerCase();
-  return destination.keywords.some((keyword) => content.includes(keyword));
+  const content = `${video.title} ${video.location_description || ""}`.toLowerCase();
+  return destination.keywords.some((keyword) => containsKeyword(content, keyword));
+}
+
+function containsKeyword(content, keyword) {
+  const escaped = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i").test(content);
 }
 
 async function sitemapResponse(env) {
@@ -644,6 +675,10 @@ function homepageCard(video) {
   const date = new Date(video.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
   const description = truncate(stripHtml(video.description), 120);
   return `<a class="video-card" href="/videos/${encodeURIComponent(video.slug)}/"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" width="640" height="360" loading="lazy"><div class="video-info"><h3>${escapeHtml(video.title)}</h3><p>${escapeHtml(date)}</p><p>${escapeHtml(description)}</p></div></a>`;
+}
+
+function featuredMarkup(video) {
+  return `<a class="featured-poster" href="/videos/${encodeURIComponent(video.slug)}/" data-video-id="${escapeHtml(video.id)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${escapeHtml(video.thumbnail_url)}" alt="${escapeHtml(video.title)}" width="1280" height="720" fetchpriority="high"><span class="featured-play" aria-hidden="true">▶</span><span class="featured-label">Play latest video</span></a>`;
 }
 
 function pageShell({ title, description, canonical, body }) {
