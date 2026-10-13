@@ -388,7 +388,7 @@ async function homepageResponse(env, request) {
     })
     .on("#video-grid", {
       element(element) {
-        element.setInnerContent(videos.slice(1, 9).map(homepageCard).join(""), { html: true });
+        element.setInnerContent(videos.slice(1, 10).map(homepageCard).join(""), { html: true });
       },
     })
     .transform(assetResponse);
