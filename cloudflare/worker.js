@@ -99,6 +99,8 @@ export default {
 };
 
 async function runScheduledSync(env) {
+  let enriched = 0;
+
   if (env.YOUTUBE_API_KEY) {
     const fullImport = await env.DB.prepare("SELECT value FROM sync_state WHERE key = 'full_import_complete' LIMIT 1").first();
     if (!fullImport) {
@@ -106,11 +108,11 @@ async function runScheduledSync(env) {
       await markFullImportComplete(env, synced);
       return synced;
     }
-    const enriched = await enrichVideoMetadataBatch(env);
-    if (enriched) return enriched;
+    enriched = await enrichVideoMetadataBatch(env);
   }
 
-  return syncVideosFromFeed(env);
+  const synced = await syncVideosFromFeed(env);
+  return { enriched, synced };
 }
 
 function robotsResponse() {
