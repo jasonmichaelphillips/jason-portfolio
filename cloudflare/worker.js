@@ -461,8 +461,26 @@ async function getRelatedVideos(env, video) {
 }
 
 function matchesTopic(video, topic) {
+  if (topic.slug === "hotel-reviews") return matchesHotelReview(video);
   const content = `${video.title} ${video.description}`.toLowerCase();
   return topic.keywords.some((keyword) => containsKeyword(content, keyword));
+}
+
+function matchesHotelReview(video) {
+  const title = video.title.toLowerCase();
+  const location = (video.location_description || "").toLowerCase().trim();
+  const hotelTerms = ["hotel", "resort", "room tour", "room review", "accommodation", "residence", "inn", "motel", "hostel", "guesthouse", "guest house", "lodge", "villa", "apartment", "condo"];
+  const foodTerms = ["restaurant", "food", "burger", "cafe", "café", "bar", "buffet", "kitchen", "pizza", "grill", "market", "coffee", "bakery"];
+  const titleSuggestsHotel = hotelTerms.some((keyword) => containsKeyword(title, keyword));
+  if (!titleSuggestsHotel) return false;
+
+  if (!location) return true;
+  if (foodTerms.some((keyword) => containsKeyword(location, keyword))) return false;
+  if (hotelTerms.some((keyword) => containsKeyword(location, keyword))) return true;
+
+  // A generic location label can still be valid when the title clearly says
+  // hotel review or room tour, but food-service locations were rejected above.
+  return containsKeyword(title, "hotel review") || containsKeyword(title, "room tour");
 }
 
 function matchesDestination(video, destination) {
