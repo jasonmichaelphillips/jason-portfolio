@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Send a message to Jason Michael Phillips." />
+  <title>Contact Jason Michael Phillips</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 1.5rem;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      color: #f7f7f7;
+      background: #141414;
+    }
+    main {
+      width: min(100%, 640px);
+      padding: clamp(1.5rem, 5vw, 3rem);
+      border: 1px solid #333;
+      border-radius: 20px;
+      background: #1f1f1f;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    }
+    h1 { margin: 0 0 .65rem; font-size: clamp(1.8rem, 5vw, 2.5rem); }
+    .intro { margin: 0 0 1.75rem; color: #c9c9c9; line-height: 1.6; }
+    label { display: block; margin: 1rem 0 .4rem; font-weight: 700; }
+    input, textarea {
+      width: 100%;
+      border: 1px solid #555;
+      border-radius: 10px;
+      padding: .85rem 1rem;
+      color: #fff;
+      background: #111;
+      font: inherit;
+    }
+    input:focus, textarea:focus { outline: 3px solid rgba(229, 9, 20, .35); border-color: #e50914; }
+    textarea { min-height: 170px; resize: vertical; }
+    button {
+      width: 100%;
+      margin-top: 1.4rem;
+      border: 0;
+      border-radius: 10px;
+      padding: .95rem 1rem;
+      color: #fff;
+      background: #e50914;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.12); }
+    .status { margin: 1rem 0 0; line-height: 1.5; }
+    .success { color: #8ee6a8; }
+    .error { color: #ff9b9b; }
+    .back { display: inline-block; margin-top: 1.5rem; color: #ff777f; }
+    .honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Send me a message</h1>
+    <p class="intro">Use the form below to get in touch. Your message will be delivered privately.</p>
+
+    <form action="/api/contact" method="post">
+      <div class="honeypot" aria-hidden="true">
+        <label for="website">Leave this field empty</label>
+        <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" maxlength="100" autocomplete="name" required />
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" maxlength="254" autocomplete="email" required />
+
+      <label for="message">Message</label>
+      <textarea id="message" name="message" maxlength="5000" required></textarea>
+
+      <button type="submit">Send message</button>
+      <p class="status" aria-live="polite">
+        <span id="status"></span>
+      </p>
+    </form>
+
+    <a class="back" href="/contact.html">← Back to contact options</a>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const status = document.getElementById('status');
+    if (params.get('sent') === '1') {
+      status.textContent = 'Your message was sent successfully. Thanks for reaching out!';
+      status.className = 'success';
+    } else if (params.get('error') === '1') {
+      status.textContent = 'The message could not be sent. Please try again in a moment.';
+      status.className = 'error';
+    }
+  </script>
+</body>
+</html>

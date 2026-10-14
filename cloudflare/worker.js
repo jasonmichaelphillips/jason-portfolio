@@ -66,6 +66,10 @@ export default {
       return apiVideosResponse(env);
     }
 
+    if (url.pathname === "/api/contact") {
+      return contactFormResponse(request, env);
+    }
+
     if (url.pathname === "/topics" || url.pathname === "/topics/") {
       return topicIndexResponse(env);
     }
@@ -126,6 +130,62 @@ Sitemap: ${SITE_URL}/sitemap.xml
       "cache-control": "public, max-age=3600",
     },
   });
+}
+
+async function contactFormResponse(request, env) {
+  if (request.method !== "POST") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { Allow: "POST" },
+    });
+  }
+
+  const form = await request.formData();
+  const name = String(form.get("name") || "").trim();
+  const email = String(form.get("email") || "").trim();
+  const message = String(form.get("message") || "").trim();
+  const honeypot = String(form.get("website") || "").trim();
+  const redirect = (status) => Response.redirect(`${SITE_URL}/contact-form.html?${status}`, 303);
+
+  if (honeypot) return redirect("sent=1");
+  if (!name || name.length > 100 || !email || email.length > 254 || !message || message.length > 5000) {
+    return redirect("error=1");
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(email)) return redirect("error=1");
+  if (!env.WEB3FORMS_ACCESS_KEY) return redirect("error=1");
+
+  const payload = {
+    access_key: env.WEB3FORMS_ACCESS_KEY,
+    name,
+    email,
+    replyto: email,
+    from_name: "Jason Michael Phillips website",
+    subject: `Website message from ${name}`,
+    message,
+    botcheck: false,
+  };
+
+  try {
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || result?.success === false) {
+      console.error("Web3Forms rejected contact submission", {
+        status: response.status,
+        message: result?.message || result?.body?.message || "Unknown Web3Forms error",
+      });
+      return redirect("error=1");
+    }
+    return redirect("sent=1");
+  } catch (error) {
+    console.error("Web3Forms request failed", error instanceof Error ? error.message : String(error));
+    return redirect("error=1");
+  }
 }
 
 async function syncVideosFromFeed(env) {
