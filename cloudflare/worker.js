@@ -29,16 +29,16 @@ const TOPICS = [
 const DESTINATIONS = [
   { slug: "udon-thani", name: "Udon Thani", keywords: ["udon thani"] },
   { slug: "bangkok", name: "Bangkok", keywords: ["bangkok"] },
-  { slug: "thailand", name: "Thailand", keywords: ["thailand", "thai"] },
-  { slug: "vietnam", name: "Vietnam", keywords: ["vietnam", "vietnamese"] },
-  { slug: "cambodia", name: "Cambodia", keywords: ["cambodia", "cambodian"] },
-  { slug: "laos", name: "Laos", keywords: ["laos", "lao"] },
-  { slug: "malaysia", name: "Malaysia", keywords: ["malaysia", "malaysian"] },
+  { slug: "thailand", name: "Thailand", keywords: ["thailand", "bangkok", "chiang mai", "pattaya", "hua hin", "phuket", "udon thani"] },
+  { slug: "vietnam", name: "Vietnam", keywords: ["vietnam", "ho chi minh", "saigon", "hanoi", "da nang", "hoi an", "nha trang"] },
+  { slug: "cambodia", name: "Cambodia", keywords: ["cambodia", "phnom penh", "siem reap", "sihanoukville"] },
+  { slug: "laos", name: "Laos", keywords: ["laos", "vientiane", "luang prabang", "pakse"] },
+  { slug: "malaysia", name: "Malaysia", keywords: ["malaysia", "kuala lumpur", "penang", "george town", "johor bahru", "malacca"] },
   { slug: "singapore", name: "Singapore", keywords: ["singapore"] },
-  { slug: "indonesia", name: "Indonesia", keywords: ["indonesia", "indonesian"] },
-  { slug: "philippines", name: "Philippines", keywords: ["philippines", "filipino"] },
-  { slug: "japan", name: "Japan", keywords: ["japan", "japanese"] },
-  { slug: "south-korea", name: "South Korea", keywords: ["south korea", "korea"] },
+  { slug: "indonesia", name: "Indonesia", keywords: ["indonesia", "bali", "jakarta", "ubud", "canggu", "kuta"] },
+  { slug: "philippines", name: "Philippines", keywords: ["philippines", "manila", "cebu", "davao", "boracay"] },
+  { slug: "japan", name: "Japan", keywords: ["japan", "tokyo", "kyoto", "osaka", "nara", "hiroshima", "sapporo", "fukuoka", "okinawa"] },
+  { slug: "south-korea", name: "South Korea", keywords: ["south korea", "korea", "seoul", "busan", "incheon", "jeju"] },
   { slug: "united-states", name: "United States", keywords: ["united states", "florida", "pensacola", "new orleans", "lake charles", "gulf coast", "kansas city", "sebring"] },
 ];
 
@@ -484,6 +484,7 @@ function matchesHotelReview(video) {
 }
 
 function matchesDestination(video, destination) {
+  if (destination.slug === "japan" && !video.location_description) return false;
   const content = `${video.title} ${video.location_description || ""}`.toLowerCase();
   return destination.keywords.some((keyword) => containsKeyword(content, keyword));
 }
