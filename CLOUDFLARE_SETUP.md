@@ -169,7 +169,15 @@ dates, and descriptions while preserving the fast client-side featured player.
 - The public page route is cacheable for one hour. A new video may take up to
   one hour to sync, plus normal crawler discovery time.
 - Do not commit Cloudflare API tokens or other secrets to the repository.
+- To enable Turnstile, create a free widget in Cloudflare and configure the
+  public site key as `TURNSTILE_SITE_KEY` and the private secret as the
+  `TURNSTILE_SECRET_KEY` Worker secret. The contact form will continue using
+  the honeypot until both values are configured.
 - Cloudflare Web Analytics is enabled from the Cloudflare dashboard rather than
   from this repository: open the site in **Web Analytics**, add the hostname,
-  and copy the provided beacon snippet into the page if you want traffic and
-  Core Web Vitals reporting.
+  and copy the provided beacon snippet into the page for traffic and Core Web
+  Vitals reporting. The beacon requires a site-specific token, so it is not
+  committed here.
+- Cache Rules and the free rate-limiting rule are configured in the Cloudflare
+  dashboard. Recommended rules are to cache versioned static assets for a long
+  TTL and rate-limit `POST /api/contact` by IP.

@@ -45,56 +45,39 @@ const DESTINATIONS = [
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    let response;
 
     if (url.pathname === "/" || url.pathname === "/index.html") {
-      return homepageResponse(env, request);
+      response = await homepageResponse(env, request);
+    } else if (url.pathname === "/contact-form.html") {
+      response = await contactFormPageResponse(request, env);
+    } else if (url.pathname === "/sitemap.xml") {
+      response = await sitemapResponse(env);
+    } else if (url.pathname === "/robots.txt") {
+      response = robotsResponse();
+    } else if (url.pathname === "/feed.xml") {
+      response = await feedResponse(env);
+    } else if (url.pathname === "/api/videos") {
+      response = await apiVideosResponse(env);
+    } else if (url.pathname === "/api/contact") {
+      response = await contactFormResponse(request, env);
+    } else if (url.pathname === "/topics" || url.pathname === "/topics/") {
+      response = await topicIndexResponse(env);
+    } else if (url.pathname === "/destinations" || url.pathname === "/destinations/") {
+      response = await destinationIndexResponse(env);
+    } else if (url.pathname === "/videos" || url.pathname === "/videos/") {
+      response = await archiveResponse(env, url);
+    } else if (url.pathname.startsWith("/videos/")) {
+      response = await videoPageResponse(env, url.pathname);
+    } else if (url.pathname.startsWith("/topics/")) {
+      response = await topicPageResponse(env, url.pathname);
+    } else if (url.pathname.startsWith("/destinations/")) {
+      response = await destinationPageResponse(env, url.pathname);
+    } else {
+      response = await env.ASSETS.fetch(request);
     }
 
-    if (url.pathname === "/sitemap.xml") {
-      return sitemapResponse(env);
-    }
-
-    if (url.pathname === "/robots.txt") {
-      return robotsResponse();
-    }
-
-    if (url.pathname === "/feed.xml") {
-      return feedResponse(env);
-    }
-
-    if (url.pathname === "/api/videos") {
-      return apiVideosResponse(env);
-    }
-
-    if (url.pathname === "/api/contact") {
-      return contactFormResponse(request, env);
-    }
-
-    if (url.pathname === "/topics" || url.pathname === "/topics/") {
-      return topicIndexResponse(env);
-    }
-
-    if (url.pathname === "/destinations" || url.pathname === "/destinations/") {
-      return destinationIndexResponse(env);
-    }
-
-    if (url.pathname === "/videos" || url.pathname === "/videos/") {
-      return archiveResponse(env, url);
-    }
-
-    if (url.pathname.startsWith("/videos/")) {
-      return videoPageResponse(env, url.pathname);
-    }
-
-    if (url.pathname.startsWith("/topics/")) {
-      return topicPageResponse(env, url.pathname);
-    }
-
-    if (url.pathname.startsWith("/destinations/")) {
-      return destinationPageResponse(env, url.pathname);
-    }
-
-    return env.ASSETS.fetch(request);
+    return withSecurityHeaders(response, request);
   },
 
   async scheduled(controller, env, ctx) {
@@ -145,6 +128,7 @@ async function contactFormResponse(request, env) {
   const email = String(form.get("email") || "").trim();
   const message = String(form.get("message") || "").trim();
   const honeypot = String(form.get("website") || "").trim();
+  const turnstileToken = String(form.get("cf-turnstile-response") || "").trim();
   const redirect = (status) => Response.redirect(`${SITE_URL}/contact-form.html?${status}`, 303);
 
   if (honeypot) return redirect("sent=1");
@@ -155,6 +139,22 @@ async function contactFormResponse(request, env) {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailPattern.test(email)) return redirect("error=1");
   if (!env.WEB3FORMS_ACCESS_KEY) return redirect("error=1");
+
+  if (env.TURNSTILE_SECRET_KEY) {
+    if (!turnstileToken) return redirect("error=1");
+
+    const verification = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: env.TURNSTILE_SECRET_KEY,
+        response: turnstileToken,
+        remoteip: request.headers.get("CF-Connecting-IP") || "",
+      }),
+    });
+    const verificationResult = await verification.json().catch(() => null);
+    if (!verification.ok || !verificationResult?.success) return redirect("error=1");
+  }
 
   const payload = {
     access_key: env.WEB3FORMS_ACCESS_KEY,
@@ -186,6 +186,36 @@ async function contactFormResponse(request, env) {
     console.error("Web3Forms request failed", error instanceof Error ? error.message : String(error));
     return redirect("error=1");
   }
+}
+
+async function contactFormPageResponse(request, env) {
+  const asset = await env.ASSETS.fetch(new Request(new URL("/contact-form.html", request.url)));
+  const html = await asset.text();
+  const configuredHtml = env.TURNSTILE_SITE_KEY
+    ? html.replaceAll("__TURNSTILE_SITE_KEY__", escapeHtml(env.TURNSTILE_SITE_KEY))
+    : html
+      .replace(/\s*<div class="cf-turnstile"[^>]*><\/div>/, "")
+      .replace(/\s*<script src="https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js"[^>]*><\/script>/, "");
+  return new Response(configuredHtml, {
+    status: asset.status,
+    headers: asset.headers,
+  });
+}
+
+function withSecurityHeaders(response, request) {
+  const headers = new Headers(response.headers);
+  headers.set("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.youtube.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://img.buymeacoffee.com; frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (new URL(request.url).protocol === "https:") {
+    headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 async function syncVideosFromFeed(env) {
