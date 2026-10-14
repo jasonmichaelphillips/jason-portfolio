@@ -204,7 +204,7 @@ async function contactFormPageResponse(request, env) {
 
 function withSecurityHeaders(response, request) {
   const headers = new Headers(response.headers);
-  headers.set("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.youtube.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://img.buymeacoffee.com; frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com https://cloudflareinsights.com https://static.cloudflareinsights.com");
+  headers.set("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.youtube.com https://www.gstatic.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com https://*.ytimg.com https://img.buymeacoffee.com; frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com https://cloudflareinsights.com https://static.cloudflareinsights.com");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
