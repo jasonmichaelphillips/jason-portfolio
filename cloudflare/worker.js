@@ -618,6 +618,7 @@ async function feedResponse(env) {
 function videoSitemapEntry(video) {
   const title = escapeXml(video.title);
   const description = escapeXml(truncate(stripHtml(video.description), 2048));
+  const durationSeconds = validVideoDuration(video.duration_seconds);
   return [
     "<url>",
     `<loc>${SITE_URL}/videos/${encodeURIComponent(video.slug)}/</loc>`,
@@ -626,12 +627,17 @@ function videoSitemapEntry(video) {
     `<video:thumbnail_loc>${escapeXml(video.thumbnail_url)}</video:thumbnail_loc>`,
     `<video:title>${title}</video:title>`,
     `<video:description>${description}</video:description>`,
-    ...(video.duration_seconds ? [`<video:duration>${video.duration_seconds}</video:duration>`] : []),
+    ...(durationSeconds === null ? [] : [`<video:duration>${durationSeconds}</video:duration>`]),
     `<video:player_loc allow_embed="yes">${escapeXml(video.embed_url)}</video:player_loc>`,
     `<video:publication_date>${new Date(video.published_at).toISOString()}</video:publication_date>`,
     "</video:video>",
     "</url>",
   ].join("");
+}
+
+function validVideoDuration(value) {
+  const duration = Number(value);
+  return Number.isInteger(duration) && duration >= 1 && duration <= 28800 ? duration : null;
 }
 
 function renderVideoPage(video, related) {
@@ -640,6 +646,7 @@ function renderVideoPage(video, related) {
   const publishedDate = new Date(video.published_at).toISOString();
   const matchingTopics = TOPICS.filter((topic) => matchesTopic(video, topic));
   const matchingDestinations = DESTINATIONS.filter((destination) => matchesDestination(video, destination));
+  const durationSeconds = validVideoDuration(video.duration_seconds);
   const schema = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
@@ -647,7 +654,7 @@ function renderVideoPage(video, related) {
     description,
     thumbnailUrl: [video.thumbnail_url],
     uploadDate: publishedDate,
-    ...(video.duration_seconds ? { duration: isoDuration(video.duration_seconds) } : {}),
+    ...(durationSeconds === null ? {} : { duration: isoDuration(durationSeconds) }),
     embedUrl: video.embed_url,
     contentUrl: video.youtube_url,
     mainEntityOfPage: canonical,
