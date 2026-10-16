@@ -48,7 +48,7 @@ export default {
     let response;
 
     if (url.pathname === "/" || url.pathname === "/index.html") {
-      response = await homepageResponse(env, request);
+      response = await homepageResponse(env, request, ctx);
     } else if (url.pathname === "/contact-form.html") {
       response = await contactFormPageResponse(request, env);
     } else if (url.pathname === "/sitemap.xml") {
@@ -465,12 +465,16 @@ async function apiVideosResponse(env) {
   return json({ items: result.results || [] });
 }
 
-async function homepageResponse(env, request) {
-  const videos = await getAllVideos(env);
+async function homepageResponse(env, request, ctx) {
+  const cacheKey = new Request(new URL("/", request.url), request);
+  const cachedResponse = await caches.default.match(cacheKey);
+  if (cachedResponse) return cachedResponse;
+
+  const videos = await getHomepageVideos(env);
   const assetResponse = await env.ASSETS.fetch(request);
   if (!videos.length || !assetResponse.ok) return assetResponse;
 
-  return new HTMLRewriter()
+  const transformedResponse = new HTMLRewriter()
     .on("#featured-video-player", {
       element(element) {
         if (videos[0]) element.setInnerContent(featuredMarkup(videos[0]), { html: true });
@@ -482,6 +486,25 @@ async function homepageResponse(env, request) {
       },
     })
     .transform(assetResponse);
+  const headers = new Headers(transformedResponse.headers);
+  headers.set("cache-control", "public, max-age=60, s-maxage=300");
+  const response = new Response(transformedResponse.body, {
+    status: transformedResponse.status,
+    statusText: transformedResponse.statusText,
+    headers,
+  });
+  ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
+  return response;
+}
+
+async function getHomepageVideos(env) {
+  const result = await env.DB.prepare(`
+    SELECT id, slug, title, description, thumbnail_url, published_at, duration_seconds, location_description, updated_at, youtube_url, embed_url
+    FROM videos
+    ORDER BY published_at DESC
+    LIMIT 10
+  `).all();
+  return result.results || [];
 }
 
 async function topicIndexResponse(env) {
