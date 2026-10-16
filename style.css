@@ -833,7 +833,7 @@ footer {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: url('profile.jpg') center/cover no-repeat, #333;
+  background: url('profile-v2.jpg') center/cover no-repeat, #333;
   margin-left: 20px;
   border: 2px solid #e50914;
 }
