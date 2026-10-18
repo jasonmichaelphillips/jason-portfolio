@@ -154,6 +154,12 @@ main {
   transition: transform .35s ease, filter .35s ease;
 }
 
+.featured-poster picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .featured-poster:hover img,
 .featured-poster:focus-visible img {
   transform: scale(1.02);

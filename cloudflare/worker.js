@@ -826,7 +826,8 @@ function homepageThumbnail(url) {
 function featuredMarkup(video) {
   const fallback = escapeHtml(video.thumbnail_url);
   const maxResolution = `https://i.ytimg.com/vi/${encodeURIComponent(video.id)}/maxresdefault.jpg`;
-  return `<a class="featured-poster" href="/videos/${encodeURIComponent(video.slug)}/" data-video-id="${escapeHtml(video.id)}" aria-label="Play ${escapeHtml(video.title)}"><img src="${maxResolution}" alt="${escapeHtml(video.title)}" width="1280" height="720" fetchpriority="high" onerror="this.onerror=null;this.src='${fallback}'"><span class="featured-play" aria-hidden="true">▶</span><span class="featured-label">Play latest video</span></a>`;
+  const mobileResolution = `https://i.ytimg.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
+  return `<a class="featured-poster" href="/videos/${encodeURIComponent(video.slug)}/" data-video-id="${escapeHtml(video.id)}" aria-label="Play ${escapeHtml(video.title)}"><picture><source media="(max-width: 768px)" srcset="${mobileResolution}"><img src="${maxResolution}" alt="${escapeHtml(video.title)}" width="1280" height="720" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='${fallback}'"></picture><span class="featured-play" aria-hidden="true">▶</span><span class="featured-label">Play latest video</span></a>`;
 }
 
 function pageShell({ title, description, canonical, body }) {
