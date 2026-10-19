@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE INDEX IF NOT EXISTS videos_published_at_idx
 ON videos(published_at DESC);
 
+CREATE INDEX IF NOT EXISTS videos_location_checked_idx
+ON videos(location_checked);
+
 CREATE TABLE IF NOT EXISTS sync_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,

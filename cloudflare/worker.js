@@ -45,6 +45,14 @@ const DESTINATIONS = [
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const cacheable = request.method === "GET" && isCacheableD1Path(url.pathname);
+    const cacheKey = cacheable ? new Request(request.url, request) : null;
+
+    if (cacheKey) {
+      const cachedResponse = await caches.default.match(cacheKey);
+      if (cachedResponse) return cachedResponse;
+    }
+
     let response;
 
     if (url.pathname === "/" || url.pathname === "/index.html") {
@@ -77,13 +85,31 @@ export default {
       response = await env.ASSETS.fetch(request);
     }
 
-    return withSecurityHeaders(response, request);
+    const securedResponse = withSecurityHeaders(response, request);
+    if (cacheKey && securedResponse.status === 200) {
+      ctx.waitUntil(caches.default.put(cacheKey, securedResponse.clone()));
+    }
+    return securedResponse;
   },
 
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(runScheduledSync(env));
   },
 };
+
+function isCacheableD1Path(pathname) {
+  return pathname === "/sitemap.xml"
+    || pathname === "/feed.xml"
+    || pathname === "/topics"
+    || pathname === "/topics/"
+    || pathname.startsWith("/topics/")
+    || pathname === "/destinations"
+    || pathname === "/destinations/"
+    || pathname.startsWith("/destinations/")
+    || pathname === "/videos"
+    || pathname === "/videos/"
+    || pathname.startsWith("/videos/");
+}
 
 async function runScheduledSync(env) {
   let enriched = 0;
@@ -563,10 +589,17 @@ async function getAllVideos(env) {
 }
 
 async function getRelatedVideos(env, video) {
-  const allVideos = await getAllVideos(env);
+  const result = await env.DB.prepare(`
+    SELECT id, slug, title, description, thumbnail_url, published_at,
+           duration_seconds, location_description, updated_at, youtube_url, embed_url
+    FROM videos
+    WHERE id <> ?
+    ORDER BY published_at DESC
+    LIMIT 100
+  `).bind(video.id).all();
+  const candidateVideos = result.results || [];
   const topics = TOPICS.filter((topic) => matchesTopic(video, topic));
-  return allVideos
-    .filter((candidate) => candidate.id !== video.id)
+  return candidateVideos
     .map((candidate) => ({ video: candidate, score: topics.filter((topic) => matchesTopic(candidate, topic)).length }))
     .sort((a, b) => b.score - a.score || new Date(b.video.published_at) - new Date(a.video.published_at))
     .slice(0, 4)
