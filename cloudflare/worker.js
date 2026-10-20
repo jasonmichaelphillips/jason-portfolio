@@ -117,15 +117,17 @@ async function runScheduledSync(env) {
   if (env.YOUTUBE_API_KEY) {
     const fullImport = await env.DB.prepare("SELECT value FROM sync_state WHERE key = 'full_import_complete' LIMIT 1").first();
     if (!fullImport) {
-      const synced = await syncVideosFromApi(env);
-      await markFullImportComplete(env, synced);
-      return synced;
+      const result = await syncVideosFromApi(env);
+      await markFullImportComplete(env, result.synced);
+      await notifyIndexNow(env, [...result.urls, SITE_URL, `${SITE_URL}/sitemap.xml`]);
+      return result.synced;
     }
     enriched = await enrichVideoMetadataBatch(env);
   }
 
-  const synced = await syncVideosFromFeed(env);
-  return { enriched, synced };
+  const result = await syncVideosFromFeed(env);
+  await notifyIndexNow(env, [...result.urls, ...((result.urls.length || enriched) ? [SITE_URL, `${SITE_URL}/sitemap.xml`] : [])]);
+  return { enriched, synced: result.synced };
 }
 
 function robotsResponse() {
@@ -258,6 +260,7 @@ async function syncVideosFromFeed(env) {
   const xml = await response.text();
   const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map((match) => match[1]);
   let synced = 0;
+  const changedUrls = new Set();
 
   for (const entry of entries) {
     const videoId = textFromXml(entry, "yt:videoId");
@@ -270,6 +273,24 @@ async function syncVideosFromFeed(env) {
 
     const slug = `${slugify(title)}-${videoId.toLowerCase()}`;
     const thumbnailUrl = thumbnailMatch?.[1] || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    const existing = await env.DB.prepare(`
+      SELECT slug, title, description, thumbnail_url, published_at
+      FROM videos
+      WHERE id = ?
+      LIMIT 1
+    `).bind(videoId).first();
+
+    if (!existing
+      || existing.slug !== slug
+      || existing.title !== title
+      || existing.description !== description
+      || existing.thumbnail_url !== thumbnailUrl
+      || existing.published_at !== publishedAt) {
+      changedUrls.add(`${SITE_URL}/videos/${encodeURIComponent(slug)}/`);
+      if (existing?.slug && existing.slug !== slug) {
+        changedUrls.add(`${SITE_URL}/videos/${encodeURIComponent(existing.slug)}/`);
+      }
+    }
 
     await env.DB.prepare(`
       INSERT INTO videos (id, slug, title, description, thumbnail_url, published_at, youtube_url, embed_url, updated_at)
@@ -305,7 +326,7 @@ async function syncVideosFromFeed(env) {
     synced += 1;
   }
 
-  return synced;
+  return { synced, urls: [...changedUrls] };
 }
 
 async function syncVideosFromApi(env) {
@@ -314,6 +335,7 @@ async function syncVideosFromApi(env) {
   let pageToken = "";
   let synced = 0;
   let statements = [];
+  const urls = new Set();
 
   do {
     const apiUrl = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
@@ -335,6 +357,8 @@ async function syncVideosFromApi(env) {
       const videoId = snippet.resourceId?.videoId;
       if (!videoId || !snippet.title) continue;
 
+      urls.add(`${SITE_URL}/videos/${encodeURIComponent(`${slugify(snippet.title)}-${videoId.toLowerCase()}`)}/`);
+
       statements.push(upsertVideoStatement(env, {
         videoId,
         title: snippet.title,
@@ -354,7 +378,7 @@ async function syncVideosFromApi(env) {
   } while (pageToken);
 
   if (statements.length) await env.DB.batch(statements);
-  return synced;
+  return { synced, urls: [...urls] };
 }
 
 async function upsertVideo(env, { videoId, title, description, publishedAt, thumbnailUrl, locationDescription = null }) {
@@ -453,6 +477,30 @@ async function markFullImportComplete(env, count) {
   await env.DB.prepare("INSERT INTO sync_state (key, value, updated_at) VALUES ('full_import_complete', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
     .bind(String(count), new Date().toISOString())
     .run();
+}
+
+async function notifyIndexNow(env, urls) {
+  if (!env.INDEXNOW_KEY || !urls.length) return;
+
+  const uniqueUrls = [...new Set(urls)].slice(0, 10000);
+  try {
+    const response = await fetch("https://api.indexnow.org/indexnow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({
+        host: new URL(SITE_URL).host,
+        key: env.INDEXNOW_KEY,
+        keyLocation: `${SITE_URL}/indexnow-key.txt`,
+        urlList: uniqueUrls,
+      }),
+    });
+
+    if (!response.ok && response.status !== 202) {
+      console.warn("IndexNow notification failed", response.status, await response.text().catch(() => ""));
+    }
+  } catch (error) {
+    console.warn("IndexNow notification request failed", error instanceof Error ? error.message : String(error));
+  }
 }
 
 async function videoPageResponse(env, pathname) {
