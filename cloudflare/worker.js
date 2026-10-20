@@ -100,6 +100,7 @@ export default {
 function isCacheableD1Path(pathname) {
   return pathname === "/sitemap.xml"
     || pathname === "/feed.xml"
+    || pathname === "/api/videos"
     || pathname === "/topics"
     || pathname === "/topics/"
     || pathname.startsWith("/topics/")
@@ -536,7 +537,12 @@ async function apiVideosResponse(env) {
     LIMIT 100
   `).all();
 
-  return json({ items: result.results || [] });
+  return new Response(JSON.stringify({ items: result.results || [] }), {
+    headers: {
+      "content-type": "application/json; charset=UTF-8",
+      "cache-control": "public, max-age=300, s-maxage=3600",
+    },
+  });
 }
 
 async function homepageResponse(env, request, ctx) {
@@ -582,7 +588,7 @@ async function getHomepageVideos(env) {
 }
 
 async function topicIndexResponse(env) {
-  const videos = await getAllVideos(env);
+  const videos = await getBrowseVideos(env);
   const activeTopics = TOPICS.filter((topic) => videos.some((video) => matchesTopic(video, topic)));
   return htmlResponse(renderTopicIndex(activeTopics));
 }
@@ -592,13 +598,13 @@ async function topicPageResponse(env, pathname) {
   const topic = TOPICS.find((item) => item.slug === slug);
   if (!topic) return notFoundResponse();
 
-  const videos = (await getAllVideos(env)).filter((video) => matchesTopic(video, topic));
+  const videos = (await getBrowseVideos(env)).filter((video) => matchesTopic(video, topic));
   if (videos.length === 0) return notFoundResponse();
   return htmlResponse(renderTopicPage(topic, videos));
 }
 
 async function destinationIndexResponse(env) {
-  const videos = await getAllVideos(env);
+  const videos = await getBrowseVideos(env);
   const active = DESTINATIONS
     .map((destination) => ({ destination, videos: videos.filter((video) => matchesDestination(video, destination)) }))
     .filter((item) => item.videos.length >= 3);
@@ -609,7 +615,7 @@ async function destinationPageResponse(env, pathname) {
   const slug = decodeURIComponent(pathname.replace(/^\/destinations\//, "").replace(/\/$/, ""));
   const destination = DESTINATIONS.find((item) => item.slug === slug);
   if (!destination) return notFoundResponse();
-  const videos = (await getAllVideos(env)).filter((video) => matchesDestination(video, destination));
+  const videos = (await getBrowseVideos(env)).filter((video) => matchesDestination(video, destination));
   if (videos.length < 3) return notFoundResponse();
   return htmlResponse(renderDestinationPage(destination, videos));
 }
@@ -636,6 +642,17 @@ async function getAllVideos(env) {
   return result.results || [];
 }
 
+async function getBrowseVideos(env) {
+  const result = await env.DB.prepare(`
+    SELECT id, slug, title, description, thumbnail_url, published_at,
+           duration_seconds, location_description, updated_at, youtube_url, embed_url
+    FROM videos
+    ORDER BY published_at DESC
+    LIMIT 250
+  `).all();
+  return result.results || [];
+}
+
 async function getRelatedVideos(env, video) {
   const result = await env.DB.prepare(`
     SELECT id, slug, title, description, thumbnail_url, published_at,
@@ -643,7 +660,7 @@ async function getRelatedVideos(env, video) {
     FROM videos
     WHERE id <> ?
     ORDER BY published_at DESC
-    LIMIT 100
+    LIMIT 20
   `).bind(video.id).all();
   const candidateVideos = result.results || [];
   const topics = TOPICS.filter((topic) => matchesTopic(video, topic));
@@ -690,16 +707,12 @@ function containsKeyword(content, keyword) {
 
 async function sitemapResponse(env) {
   const videos = await getAllVideos(env);
-  const activeTopics = TOPICS.filter((topic) => videos.some((video) => matchesTopic(video, topic)));
-  const activeDestinations = DESTINATIONS.filter((destination) => videos.filter((video) => matchesDestination(video, destination)).length >= 3);
   const latestModified = videos[0] ? new Date(videos[0].updated_at || videos[0].published_at).toISOString() : new Date().toISOString();
   const urls = [
     `<url><loc>${SITE_URL}/</loc><lastmod>${latestModified}</lastmod></url>`,
     `<url><loc>${SITE_URL}/videos/</loc><lastmod>${latestModified}</lastmod></url>`,
     `<url><loc>${SITE_URL}/topics/</loc><lastmod>${latestModified}</lastmod></url>`,
     `<url><loc>${SITE_URL}/destinations/</loc><lastmod>${latestModified}</lastmod></url>`,
-    ...activeTopics.map((topic) => `<url><loc>${SITE_URL}/topics/${topic.slug}/</loc><lastmod>${latestModified}</lastmod></url>`),
-    ...activeDestinations.map((destination) => `<url><loc>${SITE_URL}/destinations/${destination.slug}/</loc><lastmod>${latestModified}</lastmod></url>`),
     ...videos.map((video) => videoSitemapEntry(video)),
   ];
 
