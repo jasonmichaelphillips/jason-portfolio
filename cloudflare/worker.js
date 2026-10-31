@@ -1,5 +1,6 @@
 const DEFAULT_CHANNEL_ID = "UCgR5VYHYy-u_HIiimcYQOMA";
 const SITE_URL = "https://jasonmichaelphillips.com";
+const CACHE_VERSION = "20261031-nav1";
 const TOPICS = [
   {
     slug: "hotel-reviews",
@@ -46,7 +47,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const cacheable = request.method === "GET" && isCacheableD1Path(url.pathname);
-    const cacheKey = cacheable ? new Request(request.url, request) : null;
+    const cacheKey = cacheable ? cacheRequest(request) : null;
 
     if (cacheKey) {
       const cachedResponse = await caches.default.match(cacheKey);
@@ -546,7 +547,7 @@ async function apiVideosResponse(env) {
 }
 
 async function homepageResponse(env, request, ctx) {
-  const cacheKey = new Request(new URL("/", request.url), request);
+  const cacheKey = cacheRequest(new Request(new URL("/", request.url), request));
   const cachedResponse = await caches.default.match(cacheKey);
   if (cachedResponse) return cachedResponse;
 
@@ -575,6 +576,12 @@ async function homepageResponse(env, request, ctx) {
   });
   ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
   return response;
+}
+
+function cacheRequest(request) {
+  const cacheUrl = new URL(request.url);
+  cacheUrl.searchParams.set("_worker_cache", CACHE_VERSION);
+  return new Request(cacheUrl.toString(), request);
 }
 
 async function getHomepageVideos(env) {
