@@ -582,9 +582,9 @@ async function getHomepageVideos(env) {
     SELECT id, slug, title, description, thumbnail_url, published_at, duration_seconds, location_description, updated_at, youtube_url, embed_url
     FROM videos
     ORDER BY published_at DESC
-    LIMIT 10
+    LIMIT 100
   `).all();
-  return result.results || [];
+  return (result.results || []).filter(isIndexableVideo).slice(0, 10);
 }
 
 async function topicIndexResponse(env) {
@@ -625,12 +625,12 @@ async function archiveResponse(env, url) {
   const page = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
   const pageSize = 36;
   const offset = (page - 1) * pageSize;
-  const pattern = `%${query.replace(/[%_]/g, "\\$&")}%`;
-  const where = query ? "WHERE title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\'" : "";
-  const bindings = query ? [pattern, pattern, pageSize, offset] : [pageSize, offset];
-  const result = await env.DB.prepare(`SELECT id, slug, title, description, thumbnail_url, published_at FROM videos ${where} ORDER BY published_at DESC LIMIT ? OFFSET ?`).bind(...bindings).all();
-  const countResult = await env.DB.prepare(`SELECT COUNT(*) AS total FROM videos ${where}`).bind(...(query ? [pattern, pattern] : [])).first();
-  return htmlResponse(renderArchivePage(result.results || [], Number(countResult?.total || 0), query, page, pageSize));
+  const normalizedQuery = query.toLowerCase();
+  const videos = (await getAllVideos(env))
+    .filter(isIndexableVideo)
+    .filter((video) => !normalizedQuery
+      || `${video.title} ${video.description}`.toLowerCase().includes(normalizedQuery));
+  return htmlResponse(renderArchivePage(videos.slice(offset, offset + pageSize), videos.length, query, page, pageSize));
 }
 
 async function getAllVideos(env) {
@@ -662,7 +662,7 @@ async function getRelatedVideos(env, video) {
     ORDER BY published_at DESC
     LIMIT 20
   `).bind(video.id).all();
-  const candidateVideos = result.results || [];
+  const candidateVideos = (result.results || []).filter(isIndexableVideo);
   const topics = TOPICS.filter((topic) => matchesTopic(video, topic));
   return candidateVideos
     .map((candidate) => ({ video: candidate, score: topics.filter((topic) => matchesTopic(candidate, topic)).length }))
@@ -700,13 +700,22 @@ function matchesDestination(video, destination) {
   return destination.keywords.some((keyword) => containsKeyword(content, keyword));
 }
 
+// Only pages with a clear travel, food, hotel, or destination signal should
+// be presented as indexable site content. The channel also contains older or
+// unrelated uploads; keeping those out of the sitemap avoids diluting the
+// site's topical quality while preserving their direct URLs.
+function isIndexableVideo(video) {
+  return TOPICS.some((topic) => matchesTopic(video, topic))
+    || DESTINATIONS.some((destination) => matchesDestination(video, destination));
+}
+
 function containsKeyword(content, keyword) {
   const escaped = keyword.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
   return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i").test(content);
 }
 
 async function sitemapResponse(env) {
-  const videos = await getAllVideos(env);
+  const videos = (await getAllVideos(env)).filter(isIndexableVideo);
   const latestModified = videos[0] ? new Date(videos[0].updated_at || videos[0].published_at).toISOString() : new Date().toISOString();
   const urls = [
     `<url><loc>${SITE_URL}/</loc><lastmod>${latestModified}</lastmod></url>`,
@@ -725,7 +734,7 @@ async function sitemapResponse(env) {
 }
 
 async function feedResponse(env) {
-  const videos = (await getAllVideos(env)).slice(0, 50);
+  const videos = (await getAllVideos(env)).filter(isIndexableVideo).slice(0, 50);
   const entries = videos.map((video) => `<entry><title>${escapeXml(video.title)}</title><link href="${SITE_URL}/videos/${encodeURIComponent(video.slug)}/"/><id>${escapeXml(video.youtube_url)}</id><updated>${new Date(video.updated_at || video.published_at).toISOString()}</updated><summary type="html">${escapeXml(truncate(stripHtml(video.description), 500))}</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="${escapeXml(video.thumbnail_url)}"/></entry>`).join("");
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Jason Michael Phillips — Latest Videos</title><link href="${SITE_URL}/feed.xml" rel="self"/><link href="${SITE_URL}/"/><id>${SITE_URL}/</id><updated>${new Date().toISOString()}</updated>${entries}</feed>`, {
     headers: { "content-type": "application/atom+xml; charset=UTF-8", "cache-control": "public, max-age=300, s-maxage=3600" },
@@ -760,6 +769,7 @@ function validVideoDuration(value) {
 function renderVideoPage(video, related) {
   const canonical = `${SITE_URL}/videos/${encodeURIComponent(video.slug)}/`;
   const description = truncate(stripHtml(video.description), 160);
+  const robots = isIndexableVideo(video) ? "" : '<meta name="robots" content="noindex,follow">';
   const publishedDate = new Date(video.published_at).toISOString();
   const matchingTopics = TOPICS.filter((topic) => matchesTopic(video, topic));
   const matchingDestinations = DESTINATIONS.filter((destination) => matchesDestination(video, destination));
@@ -804,6 +814,7 @@ function renderVideoPage(video, related) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(video.title)} | Jason Michael Phillips</title>
   <meta name="description" content="${escapeHtml(description)}">
+  ${robots}
   <link rel="canonical" href="${canonical}">
   <meta property="og:type" content="video.other">
   <meta property="og:title" content="${escapeHtml(video.title)}">
