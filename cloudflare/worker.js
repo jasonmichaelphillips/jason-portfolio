@@ -832,7 +832,7 @@ function renderVideoPage(video, related) {
   <meta name="twitter:title" content="${escapeHtml(video.title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(video.thumbnail_url)}">
-  <link rel="stylesheet" href="/style.css?v=20261031">
+  <link rel="stylesheet" href="/style.css?v=20261031-nav2">
   <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>
   <script type="application/ld+json">${JSON.stringify(breadcrumbs).replace(/</g, "\\u003c")}</script>
 </head>
@@ -955,7 +955,7 @@ function pageShell({ title, description, canonical, body }) {
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:url" content="${canonical}">
-  <link rel="stylesheet" href="/style.css?v=20261031">
+  <link rel="stylesheet" href="/style.css?v=20261031-nav2">
 </head>
 <body class="video-page">${libraryNavigation()}${body}</body>
 </html>`;
@@ -1040,7 +1040,7 @@ function json(value, status = 200) {
 }
 
 function notFoundResponse() {
-  return new Response(`<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found | Jason Michael Phillips</title><meta name="robots" content="noindex"><link rel="stylesheet" href="/style.css?v=20261031"></head><body class="video-page"><header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/topics/">Browse topics</a></header><main class="topic-detail"><p class="eyebrow">Nothing to see here</p><h1>That page could not be found.</h1><p class="topic-intro">Try the latest videos or browse the automatically curated topics.</p><p><a class="watch-link" href="/">Return to the homepage ↗</a></p></main></body></html>`, {
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page not found | Jason Michael Phillips</title><meta name="robots" content="noindex"><link rel="stylesheet" href="/style.css?v=20261031-nav2"></head><body class="video-page"><header class="site-header"><a class="site-logo" href="/">Jason Michael Phillips</a><a class="back-link" href="/topics/">Browse topics</a></header><main class="topic-detail"><p class="eyebrow">Nothing to see here</p><h1>That page could not be found.</h1><p class="topic-intro">Try the latest videos or browse the automatically curated topics.</p><p><a class="watch-link" href="/">Return to the homepage ↗</a></p></main></body></html>`, {
     status: 404,
     headers: { "content-type": "text/html; charset=UTF-8", "cache-control": "public, max-age=300" },
   });
