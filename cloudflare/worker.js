@@ -950,8 +950,12 @@ function pageShell({ title, description, canonical, body }) {
   <meta property="og:url" content="${canonical}">
   <link rel="stylesheet" href="/style.css?v=20261031">
 </head>
-<body class="video-page">${body}</body>
+<body class="video-page">${libraryNavigation()}${body}</body>
 </html>`;
+}
+
+function libraryNavigation() {
+  return `<nav class="library-nav" aria-label="Video library navigation"><a href="/videos/"><span aria-hidden="true">▶</span>All videos</a><a href="/topics/"><span aria-hidden="true">✦</span>Topics</a><a href="/destinations/"><span aria-hidden="true">⌖</span>Destinations</a></nav>`;
 }
 
 function htmlResponse(html, status = 200) {
