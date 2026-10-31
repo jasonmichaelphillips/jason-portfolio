@@ -1027,7 +1027,9 @@ footer {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
+  background: #000;
 }
 
 .related-card span {
